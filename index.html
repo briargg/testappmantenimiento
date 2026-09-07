@@ -1,0 +1,2420 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mantenimiento CSPFA</title>
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
+    <!-- QR Code Generator -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        body {
+            background: #f0f2f5;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 12px;
+        }
+        #app {
+            width: 100%;
+            max-width: 480px;
+            background: #ffffff;
+            border-radius: 28px;
+            box-shadow: 0 20px 60px rgba(26, 58, 92, 0.10);
+            overflow: hidden;
+            position: relative;
+            min-height: 700px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* LOADING */
+        #loadingScreen {
+            padding: 40px 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 700px;
+            gap: 20px;
+            background: #ffffff;
+        }
+        .spinner {
+            width: 44px;
+            height: 44px;
+            border: 4px solid #e8ecf2;
+            border-top-color: #1a3a5c;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a3a5c;
+        }
+        .loading-sub {
+            font-size: 13px;
+            color: #94a3b8;
+        }
+
+        /* AUTH */
+        #authScreen {
+            padding: 48px 24px 32px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            background: #ffffff;
+            min-height: 700px;
+            justify-content: center;
+        }
+        #authScreen.active { display: flex; }
+
+        .auth-brand {
+            text-align: center;
+        }
+        .auth-brand .brand-icon {
+            width: 72px;
+            height: 72px;
+            background: #1a3a5c;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            font-size: 28px;
+            font-weight: 800;
+            color: #ffd700;
+            letter-spacing: -1px;
+        }
+        .auth-brand h1 {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1a3a5c;
+            letter-spacing: -0.5px;
+        }
+        .auth-brand p {
+            font-size: 13px;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+        .auth-brand .sub-line {
+            width: 40px;
+            height: 3px;
+            background: #ffd700;
+            margin: 8px auto 0;
+            border-radius: 4px;
+        }
+
+        .auth-form {
+            width: 100%;
+            max-width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .auth-form input, .auth-form select {
+            padding: 14px 16px;
+            border: 2px solid #e8ecf2;
+            border-radius: 14px;
+            font-size: 15px;
+            background: #fafcff;
+            color: #1a3a5c;
+            width: 100%;
+            transition: border 0.2s;
+        }
+        .auth-form input:focus, .auth-form select:focus {
+            outline: none;
+            border-color: #1a3a5c;
+        }
+        .auth-form input::placeholder { color: #94a3b8; }
+        .auth-form button {
+            padding: 16px;
+            border: none;
+            border-radius: 14px;
+            font-size: 17px;
+            font-weight: 700;
+            background: #1a3a5c;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .auth-form button:hover:not(:disabled) {
+            background: #2a5a8a;
+            transform: scale(1.01);
+        }
+        .auth-form button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .auth-form .toggle-auth {
+            background: none;
+            color: #94a3b8;
+            font-size: 13px;
+            text-decoration: underline;
+            cursor: pointer;
+            padding: 8px;
+            border: none;
+            transition: all 0.3s;
+        }
+        .auth-form .toggle-auth:hover { color: #1a3a5c; }
+        .auth-form .toggle-auth.highlight {
+            border: 2px solid #ffd700;
+            border-radius: 14px;
+            padding: 12px;
+            background: rgba(255,215,0,0.1);
+        }
+        .auth-error {
+            color: #dc3545;
+            font-size: 13px;
+            text-align: center;
+            min-height: 20px;
+            padding: 4px;
+        }
+        .auth-error .error-hint {
+            font-size: 12px;
+            color: #ffd700;
+            margin-top: 4px;
+            display: block;
+        }
+        .auth-error .error-hint strong {
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        /* APP SHELL */
+        #appContainer {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            min-height: 700px;
+        }
+        #appContainer.active { display: flex; }
+        .app-header {
+            background: #1a3a5c;
+            padding: 14px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .app-header .app-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .app-header .app-brand .brand-dot {
+            width: 8px;
+            height: 8px;
+            background: #ffd700;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .app-header .app-brand .brand-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: -0.3px;
+        }
+        .app-header .app-brand .brand-name span {
+            color: #ffd700;
+        }
+        .app-header .user-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .app-header .user-info .role-tag {
+            background: rgba(255,215,0,0.2);
+            color: #ffd700;
+            padding: 3px 12px;
+            border-radius: 30px;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .app-header .user-info .user-email {
+            font-size: 10px;
+            color: rgba(255,255,255,0.6);
+            max-width: 100px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .app-header .logout-btn {
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.5);
+            font-size: 18px;
+            cursor: pointer;
+            padding: 4px 8px;
+            transition: color 0.2s;
+        }
+        .app-header .logout-btn:hover { color: #ff6b6b; }
+
+        .app-content {
+            flex: 1;
+            padding: 16px 16px 80px;
+            overflow-y: auto;
+            background: #f8fafc;
+        }
+        .role-view { display: none; flex-direction: column; gap: 14px; }
+        .role-view.active { display: flex; }
+
+        /* CARDS */
+        .card {
+            background: #ffffff;
+            border-radius: 18px;
+            padding: 18px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+            border: 1px solid #edf2f7;
+        }
+        .card-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #1a3a5c;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-title .accent-line {
+            flex: 1;
+            height: 2px;
+            background: linear-gradient(to right, #ffd700, transparent);
+        }
+
+        /* QR SECTION */
+        .qr-section {
+            text-align: center;
+        }
+        .qr-section .qr-sub {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 6px;
+        }
+        #qrCodeContainer {
+            display: flex;
+            justify-content: center;
+            margin: 8px 0;
+        }
+        #qrCodeContainer canvas {
+            border-radius: 12px;
+            border: 3px solid #1a3a5c;
+            padding: 4px;
+        }
+
+        /* REPORT FORM */
+        .report-form {
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .report-form.open { display: flex; }
+        .report-form select, .report-form textarea, .report-form input {
+            padding: 12px 14px;
+            border: 2px solid #e8ecf2;
+            border-radius: 12px;
+            font-size: 14px;
+            background: #fafcff;
+            width: 100%;
+            transition: border 0.2s;
+            color: #1a3a5c;
+        }
+        .report-form select:focus, .report-form textarea:focus {
+            border-color: #1a3a5c;
+            outline: none;
+        }
+        .report-form textarea { min-height: 70px; resize: vertical; }
+        .photo-btn {
+            background: #f8fafc;
+            border: 2px dashed #d1d9e6;
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            color: #1a3a5c;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .photo-btn:hover { background: #f0f4f8; border-color: #1a3a5c; }
+        .photo-preview {
+            max-width: 100%;
+            max-height: 150px;
+            border-radius: 12px;
+            margin-top: 4px;
+            display: none;
+        }
+        .photo-preview.show { display: block; }
+        .btn-primary {
+            background: #1a3a5c;
+            color: #fff;
+            border: none;
+            padding: 14px;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .btn-primary:hover:not(:disabled) { background: #2a5a8a; transform: scale(1.01); }
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .btn-primary .spinner-small {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin: 0 auto;
+        }
+        .btn-primary.loading .spinner-small { display: block; }
+        .btn-primary.loading .btn-text { display: none; }
+
+        .btn-success {
+            background: #28a745;
+            color: #fff;
+            border: none;
+            padding: 14px;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .btn-success:hover:not(:disabled) { background: #1e7e34; transform: scale(1.01); }
+        .btn-success:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .btn-success .spinner-small {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin: 0 auto;
+        }
+        .btn-success.loading .spinner-small { display: block; }
+        .btn-success.loading .btn-text { display: none; }
+
+        .btn-gold {
+            background: #ffd700;
+            color: #1a3a5c;
+            border: none;
+            padding: 14px;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-gold:hover:not(:disabled) { background: #f0c800; transform: scale(1.01); }
+        .btn-gold:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* FILTER TABS */
+        .filter-tabs {
+            display: flex;
+            gap: 4px;
+            background: #f1f4f9;
+            border-radius: 14px;
+            padding: 4px;
+        }
+        .filter-tabs button {
+            flex: 1;
+            padding: 8px 10px;
+            border: none;
+            border-radius: 10px;
+            background: transparent;
+            font-weight: 600;
+            font-size: 11px;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .filter-tabs button.active {
+            background: #ffffff;
+            color: #1a3a5c;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .filter-tabs button:hover:not(.active) { background: rgba(255,255,255,0.5); }
+
+        /* TICKET CARDS */
+        .ticket-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .ticket-card {
+            background: #ffffff;
+            border-radius: 14px;
+            padding: 14px 16px;
+            border-left: 4px solid #1a3a5c;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            border: 1px solid #edf2f7;
+        }
+        .ticket-card:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        }
+        .ticket-card.urgente { border-left-color: #dc3545; }
+        .ticket-card.media { border-left-color: #ffd700; }
+        .ticket-card.baja { border-left-color: #28a745; }
+        .ticket-card.completado { 
+            border-left-color: #28a745;
+            background: #f8fafc;
+        }
+        .ticket-card .ticket-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        .ticket-card .ticket-id {
+            font-weight: 700;
+            color: #1a3a5c;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+        }
+        .ticket-card .ticket-estado {
+            font-size: 10px;
+            font-weight: 600;
+            padding: 3px 12px;
+            border-radius: 30px;
+            background: #f1f4f9;
+            color: #64748b;
+        }
+        .ticket-card .ticket-estado.pendiente { background: #fee2e2; color: #b91c1c; }
+        .ticket-card .ticket-estado.enprogreso { background: #fef3c7; color: #92400e; }
+        .ticket-card .ticket-estado.completado { background: #d1fae5; color: #065f46; }
+        .ticket-card .ticket-type {
+            font-size: 10px;
+            padding: 2px 10px;
+            border-radius: 30px;
+            background: #f1f4f9;
+            color: #64748b;
+        }
+        .ticket-card .ticket-type.limpieza { background: #d1fae5; color: #065f46; }
+        .ticket-card .ticket-type.mantenimiento { background: #fef3c7; color: #92400e; }
+        .ticket-card .ticket-desc {
+            font-size: 13px;
+            color: #1e293b;
+            margin: 4px 0;
+        }
+        .ticket-card .ticket-meta {
+            font-size: 11px;
+            color: #94a3b8;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 6px;
+        }
+        .ticket-card .ticket-meta span {
+            background: #f8fafc;
+            padding: 2px 10px;
+            border-radius: 30px;
+        }
+        .ticket-card .check-completado {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 24px;
+            height: 24px;
+            background: #28a745;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+        }
+        .ticket-card .completado-por {
+            font-size: 10px;
+            color: #28a745;
+            margin-top: 4px;
+            font-weight: 600;
+        }
+        .ticket-card .ticket-foto {
+            margin-top: 6px;
+            max-width: 100%;
+            max-height: 80px;
+            border-radius: 8px;
+            border: 1px solid #edf2f7;
+        }
+        .ticket-card .ticket-edificio {
+            font-size: 10px;
+            color: #1a3a5c;
+            background: #e8ecf2;
+            padding: 2px 8px;
+            border-radius: 30px;
+        }
+
+        /* TICKET DETAIL */
+        .ticket-detail {
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .ticket-detail.open { display: flex; }
+        .ticket-detail .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid #f1f4f9;
+        }
+        .ticket-detail .detail-label {
+            font-weight: 600;
+            color: #64748b;
+            font-size: 13px;
+        }
+        .ticket-detail .detail-value {
+            font-size: 13px;
+            color: #1e293b;
+        }
+        .ticket-detail .detail-value img {
+            max-width: 100%;
+            max-height: 150px;
+            border-radius: 8px;
+        }
+        .ticket-detail select, .ticket-detail button {
+            padding: 10px 14px;
+            border: 2px solid #e8ecf2;
+            border-radius: 12px;
+            font-size: 13px;
+            background: #fafcff;
+            width: 100%;
+            color: #1a3a5c;
+        }
+        .ticket-detail select:focus { outline: none; border-color: #1a3a5c; }
+        .ticket-detail .close-detail {
+            background: #f1f4f9;
+            color: #64748b;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 12px;
+        }
+        .ticket-detail .close-detail:hover { background: #e8ecf2; }
+
+        /* DASHBOARD */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+        }
+        .dash-card {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 16px 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid #edf2f7;
+        }
+        .dash-card:hover {
+            border-color: #1a3a5c;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+        }
+        .dash-card .dash-icon { font-size: 24px; margin-bottom: 4px; }
+        .dash-card .dash-label { 
+            font-weight: 600; 
+            font-size: 11px; 
+            color: #1a3a5c;
+        }
+        .dash-card .dash-badge { 
+            font-size: 9px; 
+            color: #94a3b8; 
+            margin-top: 2px;
+        }
+
+        /* KPI PANEL */
+        .kpi-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 6px;
+        }
+        .kpi-item {
+            background: #ffffff;
+            border-radius: 14px;
+            padding: 12px 8px;
+            text-align: center;
+            border: 1px solid #edf2f7;
+        }
+        .kpi-item .kpi-num {
+            font-size: 18px;
+            font-weight: 800;
+            color: #1a3a5c;
+        }
+        .kpi-item .kpi-label {
+            font-size: 8px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+        .kpi-item .kpi-num.rojo { color: #dc3545; }
+        .kpi-item .kpi-num.amarillo { color: #ffd700; }
+        .kpi-item .kpi-num.verde { color: #28a745; }
+
+        /* MODULES */
+        .module-panel {
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .module-panel.open { display: flex; }
+        .module-panel .back-btn {
+            background: none;
+            border: none;
+            color: #1a3a5c;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 0;
+        }
+        .module-panel .back-btn:hover { color: #2a5a8a; }
+
+        .list-item {
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f4f9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            gap: 8px;
+        }
+        .list-item:last-child { border-bottom: none; }
+        .list-item .item-left { flex: 1; }
+        .list-item .item-right { text-align: right; }
+
+        /* TOAST */
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a3a5c;
+            color: #fff;
+            padding: 14px 24px;
+            border-radius: 16px;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            display: none;
+            z-index: 999;
+            max-width: 90%;
+            text-align: center;
+        }
+        .toast.show { display: block; animation: fadeUp 0.3s ease; }
+        .toast.success { background: #28a745; }
+        .toast.error { background: #dc3545; }
+        .toast.warning { background: #ffd700; color: #1a3a5c; }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        .hidden { display: none !important; }
+
+        /* ASIGNACION */
+        .asignacion-container {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 12px;
+            border: 1px solid #edf2f7;
+            margin: 4px 0;
+        }
+        .asignacion-container select {
+            margin-bottom: 8px;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 480px) {
+            #app { border-radius: 0; min-height: 100vh; }
+            .app-content { padding: 12px 12px 80px; }
+            .dashboard-grid { grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+            .dash-card { padding: 12px 6px; }
+            .dash-card .dash-icon { font-size: 20px; }
+            .kpi-panel { grid-template-columns: 1fr 1fr; }
+            .auth-brand h1 { font-size: 20px; }
+            .app-header .app-brand .brand-name { font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <!-- LOADING -->
+    <div id="loadingScreen">
+        <div class="spinner"></div>
+        <div class="loading-title">CSPFA</div>
+        <div class="loading-sub">Mantenimiento y Limpieza</div>
+    </div>
+
+    <!-- AUTH -->
+    <div id="authScreen">
+        <div class="auth-brand">
+            <div class="brand-icon">C</div>
+            <h1>Mantenimiento CSPFA</h1>
+            <p>Círculo de Suboficiales</p>
+            <div class="sub-line"></div>
+        </div>
+        <div class="auth-form" id="loginForm">
+            <div class="auth-error" id="authError"></div>
+            <input type="email" id="loginEmail" placeholder="Email" />
+            <input type="password" id="loginPassword" placeholder="Contraseña" />
+            <button onclick="handleLogin()">Ingresar</button>
+            <button class="toggle-auth" onclick="showRegister()">¿No tenés cuenta? Registrate</button>
+        </div>
+        <div class="auth-form hidden" id="registerForm">
+            <div class="auth-error" id="regError"></div>
+            <input type="text" id="regName" placeholder="Nombre completo" />
+            <input type="email" id="regEmail" placeholder="Email" />
+            <input type="password" id="regPassword" placeholder="Contraseña (mínimo 6 caracteres)" />
+            <select id="regRole">
+                <option value="encargado_general">👔 Encargado General</option>
+                <option value="encargado_hotel">🏨 Encargado Hotel</option>
+                <option value="encargado_sede">🏢 Encargado Sede</option>
+                <option value="mucama_hotel">🧹 Mucama Hotel</option>
+                <option value="mucama_sede">🧹 Mucama Sede</option>
+                <option value="tecnico">🔧 Técnico</option>
+                <option value="administrativo">📋 Administrativo</option>
+            </select>
+            <button onclick="handleRegister()">Registrarse</button>
+            <button class="toggle-auth" onclick="showLogin()">Ya tengo cuenta</button>
+        </div>
+    </div>
+
+    <!-- APP -->
+    <div id="appContainer">
+        <div class="app-header">
+            <div class="app-brand">
+                <span class="brand-dot"></span>
+                <span class="brand-name">CSPFA <span>Mant.</span></span>
+            </div>
+            <div class="user-info">
+                <span class="user-email" id="userEmail">user@email.com</span>
+                <span class="role-tag" id="roleTag">Encargado</span>
+                <button class="logout-btn" onclick="handleLogout()">✕</button>
+            </div>
+        </div>
+
+        <div class="app-content" id="appContent">
+            <!-- ENCARGADO (GENERAL, HOTEL, SEDE) -->
+            <div class="role-view" id="viewEncargado">
+                <div class="dashboard-grid">
+                    <div class="dash-card" onclick="openModule('tickets')">
+                        <div class="dash-icon">🎫</div>
+                        <div class="dash-label">Tickets</div>
+                        <div class="dash-badge">Gestionar</div>
+                    </div>
+                    <div class="dash-card" onclick="openModule('nuevo')">
+                        <div class="dash-icon">➕</div>
+                        <div class="dash-label">Nuevo</div>
+                        <div class="dash-badge">Crear ticket</div>
+                    </div>
+                    <div class="dash-card" onclick="openModule('completados')">
+                        <div class="dash-icon">✅</div>
+                        <div class="dash-label">Completados</div>
+                        <div class="dash-badge">Historial</div>
+                    </div>
+                    <div class="dash-card" onclick="openModule('panel')">
+                        <div class="dash-icon">📊</div>
+                        <div class="dash-label">Panel</div>
+                        <div class="dash-badge">Estadísticas</div>
+                    </div>
+                    <div class="dash-card" onclick="openModule('ubicaciones')">
+                        <div class="dash-icon">📍</div>
+                        <div class="dash-label">Ubicaciones</div>
+                        <div class="dash-badge">Estructura</div>
+                    </div>
+                    <div class="dash-card" onclick="openModule('usuarios')">
+                        <div class="dash-icon">👥</div>
+                        <div class="dash-label">Usuarios</div>
+                        <div class="dash-badge">Equipo</div>
+                    </div>
+                </div>
+
+                <div class="kpi-panel">
+                    <div class="kpi-item"><div class="kpi-num" id="kpiTotal">0</div><div class="kpi-label">Total</div></div>
+                    <div class="kpi-item"><div class="kpi-num rojo" id="kpiPendientes">0</div><div class="kpi-label">Pendientes</div></div>
+                    <div class="kpi-item"><div class="kpi-num amarillo" id="kpiProgreso">0</div><div class="kpi-label">En Progreso</div></div>
+                    <div class="kpi-item"><div class="kpi-num verde" id="kpiCompletados">0</div><div class="kpi-label">Completados</div></div>
+                </div>
+
+                <!-- MÓDULOS -->
+                <div class="module-panel" id="modTickets">
+                    <button class="back-btn" onclick="closeModule()">← Volver</button>
+                    <div class="card">
+                        <div class="card-title">🎫 Tickets <span class="accent-line"></span></div>
+                        <div class="filter-tabs" style="margin-bottom:10px;">
+                            <button class="active" data-filter="all" onclick="filterTicketsEncargado('all', this)">Todos</button>
+                            <button data-filter="limpieza" onclick="filterTicketsEncargado('limpieza', this)">🧹</button>
+                            <button data-filter="mantenimiento" onclick="filterTicketsEncargado('mantenimiento', this)">🔧</button>
+                            <button data-filter="pendiente" onclick="filterTicketsEncargado('pendiente', this)">⏳</button>
+                            <button data-filter="completado" onclick="filterTicketsEncargado('completado', this)">✅</button>
+                        </div>
+                        <div id="ticketsEncargadoContainer"></div>
+                    </div>
+                </div>
+
+                <div class="module-panel" id="modNuevo">
+                    <button class="back-btn" onclick="closeModule()">← Volver</button>
+                    <div class="card">
+                        <div class="card-title">➕ Crear nuevo ticket <span class="accent-line"></span></div>
+                        <div class="report-form open">
+                            <select id="reportBuilding">
+                                <option value="Hotel Alberti">Hotel Alberti</option>
+                                <option value="Hotel 7 de Marzo">Hotel 7 de Marzo</option>
+                                <option value="Sede">Sede</option>
+                            </select>
+                            <select id="reportFloor"></select>
+                            <select id="reportSpace"></select>
+                            <select id="reportType">
+                                <option value="limpieza">🧹 Limpieza</option>
+                                <option value="mantenimiento">🔧 Mantenimiento</option>
+                            </select>
+                            <select id="reportPriority">
+                                <option value="urgente">🔴 Urgente</option>
+                                <option value="media">🟡 Media</option>
+                                <option value="baja">🟢 Baja</option>
+                            </select>
+                            <textarea id="reportObs" placeholder="Descripción del problema..."></textarea>
+                            <div class="photo-btn" onclick="capturePhoto()">📷 Adjuntar foto</div>
+                            <img id="photoPreview" class="photo-preview" alt="Vista previa" />
+                            <button class="btn-primary" id="btnCrearTicket" onclick="submitTicket()">
+                                <span class="btn-text">✅ Crear ticket</span>
+                                <span class="spinner-small"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="module-panel" id="modCompletados">
+                    <button class="back-btn" onclick="closeModule()">← Volver</button>
+                    <div class="card">
+                        <div class="card-title">🔍 Buscar completados <span class="accent-line"></span></div>
+                        <input type="text" id="completadosSearch" placeholder="Buscar por texto..." oninput="renderCompletados()" style="width:100%;padding:10px 14px;border:2px solid #e8ecf2;border-radius:12px;font-size:13px;margin-bottom:8px;" />
+                        <div style="display:flex;gap:8px;">
+                            <input type="date" id="completadosDateFrom" onchange="renderCompletados()" style="flex:1;padding:10px 14px;border:2px solid #e8ecf2;border-radius:12px;font-size:13px;" />
+                            <input type="date" id="completadosDateTo" onchange="renderCompletados()" style="flex:1;padding:10px 14px;border:2px solid #e8ecf2;border-radius:12px;font-size:13px;" />
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">✅ Tickets completados <span class="accent-line"></span></div>
+                        <div id="completadosContainer"></div>
+                    </div>
+                </div>
+
+                <div class="module-panel" id="modPanel">
+                    <button class="back-btn" onclick="closeModule()">← Volver</button>
+                    <div class="card">
+                        <div class="card-title">📊 Estadísticas <span class="accent-line"></span></div>
+                        <div id="panelContainer"></div>
+                    </div>
+                </div>
+
+                <div class="module-panel" id="modUbicaciones">
+                    <button class="back-btn" onclick="closeModule()">← Volver</button>
+                    <div class="card">
+                        <div class="card-title">📍 Estructura de edificios <span class="accent-line"></span></div>
+                        <div id="ubicacionesContainer"></div>
+                    </div>
+                </div>
+
+                <div class="module-panel" id="modUsuarios">
+                    <button class="back-btn" onclick="closeModule()">← Volver</button>
+                    <div class="card">
+                        <div class="card-title">👥 Usuarios del sistema <span class="accent-line"></span></div>
+                        <div id="usuariosContainer"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ADMINISTRATIVO (SOLO CREA TICKETS) -->
+            <div class="role-view" id="viewAdministrativo">
+                <div class="card qr-section">
+                    <div class="card-title" style="justify-content:center;">📱 Reporte rápido</div>
+                    <div id="qrCodeContainerAdmin"></div>
+                    <div class="qr-sub">Escanea el QR para reportar un problema</div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">📝 Reportar problema <span class="accent-line"></span></div>
+                    <div class="report-form open">
+                        <select id="reportBuildingAdmin">
+                            <option value="Hotel Alberti">Hotel Alberti</option>
+                            <option value="Hotel 7 de Marzo">Hotel 7 de Marzo</option>
+                            <option value="Sede">Sede</option>
+                        </select>
+                        <select id="reportFloorAdmin"></select>
+                        <select id="reportSpaceAdmin"></select>
+                        <select id="reportTypeAdmin">
+                            <option value="limpieza">🧹 Limpieza</option>
+                            <option value="mantenimiento">🔧 Mantenimiento</option>
+                        </select>
+                        <select id="reportPriorityAdmin">
+                            <option value="urgente">🔴 Urgente</option>
+                            <option value="media">🟡 Media</option>
+                            <option value="baja">🟢 Baja</option>
+                        </select>
+                        <textarea id="reportObsAdmin" placeholder="Descripción del problema..."></textarea>
+                        <div class="photo-btn" onclick="capturePhotoAdmin()">📷 Adjuntar foto</div>
+                        <img id="photoPreviewAdmin" class="photo-preview" alt="Vista previa" />
+                        <button class="btn-primary" id="btnCrearTicketAdmin" onclick="submitTicketAdmin()">
+                            <span class="btn-text">📨 Enviar reporte</span>
+                            <span class="spinner-small"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <div style="background:#e8ecf2;border-radius:12px;padding:12px;font-size:12px;color:#64748b;text-align:center;">
+                    ✅ Tu reporte será revisado por el encargado
+                </div>
+            </div>
+
+            <!-- MUCAMA / TÉCNICO (SOLO VEN TICKETS ASIGNADOS) -->
+            <div class="role-view" id="viewTrabajador">
+                <div class="card qr-section">
+                    <div class="card-title" style="justify-content:center;">📱 Reporte rápido</div>
+                    <div id="qrCodeContainerTrabajador"></div>
+                    <div class="qr-sub">Escanea el QR para reportar un problema</div>
+                </div>
+
+                <div style="background:#d1fae5;border-radius:12px;padding:10px 14px;font-size:13px;color:#065f46;border:1px solid #a7f3d0;text-align:center;">
+                    📋 Mostrando solo tickets asignados a <strong id="trabajadorNombre">ti</strong>
+                </div>
+
+                <div class="filter-tabs">
+                    <button class="active" data-filter="all" onclick="filterTicketsTrabajador('all', this)">Todos</button>
+                    <button data-filter="pendiente" onclick="filterTicketsTrabajador('pendiente', this)">⏳</button>
+                    <button data-filter="enprogreso" onclick="filterTicketsTrabajador('enprogreso', this)">🔄</button>
+                    <button data-filter="completado" onclick="filterTicketsTrabajador('completado', this)">✅</button>
+                </div>
+
+                <div class="ticket-list" id="ticketListTrabajador">
+                    <div style="text-align:center;padding:30px;color:#94a3b8;font-size:13px;">Cargando tickets...</div>
+                </div>
+
+                <div class="ticket-detail card" id="ticketDetailTrabajador">
+                    <div class="card-title" id="detailTitleTrabajador">Detalle del ticket</div>
+                    <div class="detail-row"><span class="detail-label">ID</span><span class="detail-value" id="dIdT">-</span></div>
+                    <div class="detail-row"><span class="detail-label">Ubicación</span><span class="detail-value" id="dLocationT">-</span></div>
+                    <div class="detail-row"><span class="detail-label">Tipo</span><span class="detail-value" id="dTypeT">-</span></div>
+                    <div class="detail-row"><span class="detail-label">Observación</span><span class="detail-value" id="dObsT">-</span></div>
+                    <div class="detail-row"><span class="detail-label">Prioridad</span><span class="detail-value" id="dPriorityT">-</span></div>
+                    <div class="detail-row"><span class="detail-label">Estado</span><span class="detail-value" id="dStatusT">-</span></div>
+                    <div class="detail-row"><span class="detail-label">Asignado a</span><span class="detail-value" id="dAsignadoT">-</span></div>
+                    <div class="detail-row"><span class="detail-label">Completado por</span><span class="detail-value" id="dCompletadoPorT">-</span></div>
+                    <div class="detail-row"><span class="detail-label">Foto</span><span class="detail-value" id="dPhotoT">-</span></div>
+                    
+                    <div id="completarFotoSection" style="display:none;">
+                        <div class="photo-btn" onclick="capturePhotoCierre()">📷 Subir foto de evidencia</div>
+                        <img id="photoCierrePreview" class="photo-preview" alt="Foto evidencia" />
+                    </div>
+                    
+                    <button class="btn-success" id="btnCompletarTicket" onclick="completarTicket()">
+                        <span class="btn-text">✅ Marcar como completado</span>
+                        <span class="spinner-small"></span>
+                    </button>
+                    <button class="btn-gold" onclick="volverListaTrabajador()" style="margin-top:4px;">← Volver a la lista</button>
+                    <button class="close-detail" onclick="closeDetailTrabajador()">✕ Cerrar detalle</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+    // ============================================================
+    //  FIREBASE CONFIGURACIÓN
+    // ============================================================
+    const firebaseConfig = {
+        apiKey: "AIzaSyCTWdzEJXjgx10Qtp2Zh9ef2G7364S-RUo",
+        authDomain: "xestails.firebaseapp.com",
+        projectId: "xestails",
+        storageBucket: "xestails.appspot.com",
+        messagingSenderId: "573014267308",
+        appId: "1:573014267308:web:c14ebdfbfcf0b26e421609",
+        measurementId: "G-XKHG2JNLXT"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // ============================================================
+    //  ESTRUCTURA DE EDIFICIOS
+    // ============================================================
+    const edificios = {
+        "Hotel Alberti": {
+            pisos: {
+                "PB": ["Recepción", "Hab PB A", "Hab PB B", "Baño Público"],
+                "Piso 1": ["101", "102", "103", "104"],
+                "Piso 2": ["201", "202", "203", "204"],
+                "Piso 3": ["301", "302", "303", "304"],
+                "Piso 4": ["401", "402", "403", "404"],
+                "Piso 5": ["501", "502", "503", "504"],
+                "Piso 6": ["601", "602", "603", "604"],
+                "Piso 7": ["Depósito", "Baño Mucamas 1", "Baño Mucamas 2"]
+            }
+        },
+        "Hotel 7 de Marzo": {
+            pisos: {
+                "Piso 1": ["Oficinas", "Salón", "Cocina", "Baño Hombre", "Baño Mujer"],
+                "Piso 2": ["201 Suite", "202", "203", "204", "205", "206", "Office A", "Office B", "Cuarto Mucama"],
+                "Piso 3": ["301", "302", "303", "304", "305", "306", "Office A", "Office B", "Cuarto Mucama"],
+                "Piso 4": ["401", "402", "403", "404", "405", "406", "Office A", "Office B", "Cuarto Mucama"],
+                "Piso 5": ["501 Suite", "502", "503", "504", "505", "506", "Office A", "Office B", "Cuarto Mucama"],
+                "Piso 6": ["601", "602", "603", "604", "605", "606", "Office A", "Office B", "Cuarto Mucama"],
+                "Piso 7": ["701", "702", "703", "704", "705", "706", "Office A", "Office B", "Cuarto Mucama"],
+                "Piso 8": ["801", "802", "803", "804", "805", "806", "Office A", "Office B", "Cuarto Mucama"],
+                "Piso 9": ["901", "902", "903", "904", "905", "906", "Office A", "Office B", "Cuarto Mucama"],
+                "Piso 10": ["Lavadero", "Tanque de Agua"]
+            }
+        },
+        "Sede": {
+            pisos: {
+                "Subsuelo": ["Estacionamiento"],
+                "PB": ["Recepción", "Baños"],
+                "Piso 1": ["Auditorio", "Baño D", "Baño C"],
+                "Piso 2": ["Camarín", "Pullman"],
+                "Piso 3": ["Salón Confitería", "Baño D", "Baño C"],
+                "Piso 4": ["Musculación", "Vestuarios C"],
+                "Piso 5": ["OF Cultura", "Dpto Deporte", "Salón Gimnasia", "Vestuario D"],
+                "Piso 6": ["Presidencia", "Secretario General", "Salón de Reunión"],
+                "Piso 7": ["Servicios Médicos"],
+                "Piso 8": ["Tesorería", "Contaduría"],
+                "Piso 9": ["Dpto. Vitalicios", "Personal"],
+                "Piso 10": ["Imprenta", "R. Publicas"]
+            }
+        }
+    };
+
+    // ============================================================
+    //  ROLES Y PERMISOS
+    // ============================================================
+    const ROLES = {
+        encargado_general: {
+            label: '👔 Encargado General',
+            puedeCrear: true,
+            puedeAsignar: true,
+            puedeCompletar: true,
+            verTodos: true,
+            edificiosPermitidos: ['Hotel Alberti', 'Hotel 7 de Marzo', 'Sede']
+        },
+        encargado_hotel: {
+            label: '🏨 Encargado Hotel',
+            puedeCrear: true,
+            puedeAsignar: true,
+            puedeCompletar: true,
+            verTodos: true,
+            edificiosPermitidos: ['Hotel Alberti', 'Hotel 7 de Marzo']
+        },
+        encargado_sede: {
+            label: '🏢 Encargado Sede',
+            puedeCrear: true,
+            puedeAsignar: true,
+            puedeCompletar: true,
+            verTodos: true,
+            edificiosPermitidos: ['Sede']
+        },
+        mucama_hotel: {
+            label: '🧹 Mucama Hotel',
+            puedeCrear: false,
+            puedeAsignar: false,
+            puedeCompletar: true,
+            verTodos: false,
+            soloAsignados: true,
+            tipoTrabajo: 'limpieza',
+            edificiosPermitidos: ['Hotel Alberti', 'Hotel 7 de Marzo']
+        },
+        mucama_sede: {
+            label: '🧹 Mucama Sede',
+            puedeCrear: false,
+            puedeAsignar: false,
+            puedeCompletar: true,
+            verTodos: false,
+            soloAsignados: true,
+            tipoTrabajo: 'limpieza',
+            edificiosPermitidos: ['Sede']
+        },
+        tecnico: {
+            label: '🔧 Técnico',
+            puedeCrear: false,
+            puedeAsignar: false,
+            puedeCompletar: true,
+            verTodos: false,
+            soloAsignados: true,
+            tipoTrabajo: 'mantenimiento',
+            edificiosPermitidos: ['Hotel Alberti', 'Hotel 7 de Marzo', 'Sede']
+        },
+        administrativo: {
+            label: '📋 Administrativo',
+            puedeCrear: true,
+            puedeAsignar: false,
+            puedeCompletar: false,
+            verTodos: false,
+            soloCrear: true,
+            edificiosPermitidos: ['Hotel Alberti', 'Hotel 7 de Marzo', 'Sede']
+        }
+    };
+
+    // ============================================================
+    //  ESTADO GLOBAL
+    // ============================================================
+    let currentUser = null;
+    let currentRole = null;
+    let currentTicketId = null;
+    let currentFilter = 'all';
+    let allTickets = [];
+    let allUsers = [];
+    let photoData = null;
+    let photoCierreData = null;
+    let encargadoFilter = 'all';
+    let qrInstance = null;
+    let isSubmitting = false;
+    let isCompleting = false;
+
+    // ============================================================
+    //  TOAST
+    // ============================================================
+    function showToast(msg, type = 'info', duration = 4000) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className = 'toast show';
+        if (type === 'success') t.classList.add('success');
+        if (type === 'error') t.classList.add('error');
+        if (type === 'warning') t.classList.add('warning');
+        clearTimeout(t._timer);
+        t._timer = setTimeout(() => t.classList.remove('show'), duration);
+    }
+
+    // ============================================================
+    //  AUTH
+    // ============================================================
+    function showRegister() {
+        document.getElementById('loginForm').classList.add('hidden');
+        document.getElementById('registerForm').classList.remove('hidden');
+        document.getElementById('authError').textContent = '';
+        document.getElementById('regError').innerHTML = '';
+        const toggleBtn = document.querySelector('#registerForm .toggle-auth');
+        if (toggleBtn) toggleBtn.classList.remove('highlight');
+    }
+
+    function showLogin() {
+        document.getElementById('registerForm').classList.add('hidden');
+        document.getElementById('loginForm').classList.remove('hidden');
+        document.getElementById('regError').innerHTML = '';
+        document.getElementById('authError').textContent = '';
+    }
+
+    async function handleRegister() {
+        const name = document.getElementById('regName').value.trim();
+        const email = document.getElementById('regEmail').value.trim();
+        const password = document.getElementById('regPassword').value;
+        const role = document.getElementById('regRole').value;
+
+        if (!name || !email || !password) {
+            document.getElementById('regError').innerHTML = '⚠️ Completá todos los campos';
+            return;
+        }
+        if (password.length < 6) {
+            document.getElementById('regError').innerHTML = '⚠️ La contraseña debe tener al menos 6 caracteres';
+            return;
+        }
+
+        document.getElementById('regError').innerHTML = '⏳ Registrando...';
+
+        try {
+            const cred = await auth.createUserWithEmailAndPassword(email, password);
+            await db.collection('usuarios').doc(cred.user.uid).set({
+                uid: cred.user.uid,
+                name: name,
+                email: email,
+                role: role,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            document.getElementById('regError').innerHTML = '';
+            showToast('✅ Registro exitoso!', 'success');
+            await auth.signOut();
+            await auth.signInWithEmailAndPassword(email, password);
+        } catch (error) {
+            console.error('Error de registro:', error);
+            
+            if (error.code === 'auth/email-already-in-use') {
+                document.getElementById('regError').innerHTML = `
+                    ❌ Este email ya está registrado. 
+                    <span class="error-hint">
+                        💡 Usá el <strong onclick="showLogin()">login</strong> o probá con otro email
+                    </span>
+                `;
+                const toggleBtn = document.querySelector('#registerForm .toggle-auth');
+                if (toggleBtn) toggleBtn.classList.add('highlight');
+            } else if (error.code === 'auth/weak-password') {
+                document.getElementById('regError').innerHTML = '⚠️ La contraseña es muy débil. Usá al menos 6 caracteres.';
+            } else if (error.code === 'auth/invalid-email') {
+                document.getElementById('regError').innerHTML = '⚠️ El email no es válido.';
+            } else {
+                document.getElementById('regError').innerHTML = '❌ Error: ' + error.message;
+            }
+        }
+    }
+
+    async function handleLogin() {
+        const email = document.getElementById('loginEmail').value.trim();
+        const password = document.getElementById('loginPassword').value;
+
+        if (!email || !password) {
+            document.getElementById('authError').textContent = '⚠️ Ingresá email y contraseña';
+            return;
+        }
+
+        try {
+            await auth.signInWithEmailAndPassword(email, password);
+        } catch (error) {
+            if (error.code === 'auth/user-not-found') {
+                document.getElementById('authError').textContent = '❌ Usuario no encontrado. ¿Estás registrado?';
+            } else if (error.code === 'auth/wrong-password') {
+                document.getElementById('authError').textContent = '❌ Contraseña incorrecta.';
+            } else if (error.code === 'auth/invalid-email') {
+                document.getElementById('authError').textContent = '❌ Email inválido.';
+            } else {
+                document.getElementById('authError').textContent = '❌ ' + error.message;
+            }
+        }
+    }
+
+    async function handleLogout() {
+        try {
+            await auth.signOut();
+            showToast('👋 Sesión cerrada', 'info');
+        } catch (error) {
+            showToast('❌ Error al cerrar sesión', 'error');
+        }
+    }
+
+    // ============================================================
+    //  MONITOREO DE AUTENTICACIÓN
+    // ============================================================
+    auth.onAuthStateChanged(async (user) => {
+        if (user) {
+            document.getElementById('loadingScreen').style.display = 'none';
+            
+            const doc = await db.collection('usuarios').doc(user.uid).get();
+            if (doc.exists) {
+                currentUser = { uid: user.uid, ...doc.data() };
+                currentRole = currentUser.role;
+                
+                document.getElementById('authScreen').classList.remove('active');
+                document.getElementById('authScreen').style.display = 'none';
+                document.getElementById('appContainer').classList.add('active');
+                
+                document.getElementById('userEmail').textContent = currentUser.email;
+                const roleLabels = {
+                    encargado_general: 'Enc. General',
+                    encargado_hotel: 'Enc. Hotel',
+                    encargado_sede: 'Enc. Sede',
+                    mucama_hotel: 'Mucama Hotel',
+                    mucama_sede: 'Mucama Sede',
+                    tecnico: 'Técnico',
+                    administrativo: 'Admin.'
+                };
+                document.getElementById('roleTag').textContent = roleLabels[currentRole] || currentRole;
+                
+                document.querySelectorAll('.role-view').forEach(v => v.classList.remove('active'));
+                
+                // Mostrar vista según rol
+                const rolConfig = ROLES[currentRole];
+                if (!rolConfig) {
+                    showToast('⚠️ Rol no configurado', 'error');
+                    return;
+                }
+                
+                if (currentRole === 'administrativo') {
+                    document.getElementById('viewAdministrativo').classList.add('active');
+                    generarQRAdmin();
+                    updateFloorOptionsAdmin();
+                } else if (rolConfig.soloAsignados) {
+                    document.getElementById('viewTrabajador').classList.add('active');
+                    document.getElementById('trabajadorNombre').textContent = currentUser.name;
+                    generarQRTrabajador();
+                } else {
+                    document.getElementById('viewEncargado').classList.add('active');
+                }
+                
+                await loadData();
+                updateFloorOptions();
+                updateFloorOptionsAdmin();
+                
+                if (currentRole === 'administrativo') {
+                    // Los administrativos no ven tickets
+                } else if (ROLES[currentRole]?.soloAsignados) {
+                    renderTicketsTrabajador('all');
+                } else {
+                    updateKPIs();
+                    loadUsers();
+                    renderTicketsEncargado('all');
+                }
+            } else {
+                await db.collection('usuarios').doc(user.uid).set({
+                    uid: user.uid,
+                    name: user.displayName || user.email,
+                    email: user.email,
+                    role: 'mucama_hotel',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                window.location.reload();
+            }
+        } else {
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('authScreen').style.display = 'flex';
+            document.getElementById('authScreen').classList.add('active');
+            document.getElementById('appContainer').classList.remove('active');
+            currentUser = null;
+            currentRole = null;
+        }
+    });
+
+    // ============================================================
+    //  CARGA DE DATOS EN TIEMPO REAL
+    // ============================================================
+    function loadData() {
+        db.collection('tickets').orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
+            allTickets = [];
+            snapshot.forEach(doc => {
+                allTickets.push({ id: doc.id, ...doc.data() });
+            });
+            
+            const rolConfig = ROLES[currentRole];
+            if (!rolConfig) return;
+            
+            if (rolConfig.soloAsignados) {
+                renderTicketsTrabajador(currentFilter);
+            } else if (currentRole === 'administrativo') {
+                // No mostrar tickets
+            } else {
+                updateKPIs();
+                renderTicketsEncargado(encargadoFilter);
+                renderCompletados();
+                renderPanel();
+            }
+        });
+    }
+
+    // ============================================================
+    //  QR GENERATORS
+    // ============================================================
+    function generarQRAdmin() {
+        const container = document.getElementById('qrCodeContainerAdmin');
+        if (!container) return;
+        container.innerHTML = '';
+        const url = window.location.href.split('?')[0] + '?quick=true';
+        try {
+            qrInstance = new QRCode(container, {
+                text: url,
+                width: 140,
+                height: 140,
+                colorDark: "#1a3a5c",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        } catch (e) {
+            container.innerHTML = '<div style="padding:16px;background:#f1f4f9;border-radius:12px;color:#94a3b8;font-size:13px;">QR no disponible</div>';
+        }
+    }
+
+    function generarQRTrabajador() {
+        const container = document.getElementById('qrCodeContainerTrabajador');
+        if (!container) return;
+        container.innerHTML = '';
+        const url = window.location.href.split('?')[0] + '?quick=true';
+        try {
+            qrInstance = new QRCode(container, {
+                text: url,
+                width: 140,
+                height: 140,
+                colorDark: "#1a3a5c",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        } catch (e) {
+            container.innerHTML = '<div style="padding:16px;background:#f1f4f9;border-radius:12px;color:#94a3b8;font-size:13px;">QR no disponible</div>';
+        }
+    }
+
+    // ============================================================
+    //  UBICACIONES - ADMIN
+    // ============================================================
+    function updateFloorOptionsAdmin() {
+        const building = document.getElementById('reportBuildingAdmin')?.value;
+        if (!building) return;
+        const floorSelect = document.getElementById('reportFloorAdmin');
+        const spaceSelect = document.getElementById('reportSpaceAdmin');
+        
+        floorSelect.innerHTML = '';
+        spaceSelect.innerHTML = '';
+        
+        const pisos = edificios[building]?.pisos || {};
+        Object.keys(pisos).forEach(piso => {
+            const option = document.createElement('option');
+            option.value = piso;
+            option.textContent = piso;
+            floorSelect.appendChild(option);
+        });
+        
+        if (floorSelect.options.length > 0) {
+            updateSpaceOptionsAdmin();
+        }
+    }
+
+    function updateSpaceOptionsAdmin() {
+        const building = document.getElementById('reportBuildingAdmin')?.value;
+        const floor = document.getElementById('reportFloorAdmin')?.value;
+        const spaceSelect = document.getElementById('reportSpaceAdmin');
+        if (!building || !floor || !spaceSelect) return;
+        
+        spaceSelect.innerHTML = '';
+        const espacios = edificios[building]?.pisos?.[floor] || [];
+        espacios.forEach(espacio => {
+            const option = document.createElement('option');
+            option.value = espacio;
+            option.textContent = espacio;
+            spaceSelect.appendChild(option);
+        });
+    }
+
+    document.getElementById('reportBuildingAdmin')?.addEventListener('change', updateFloorOptionsAdmin);
+    document.getElementById('reportFloorAdmin')?.addEventListener('change', updateSpaceOptionsAdmin);
+
+    // ============================================================
+    //  UBICACIONES - ENCARGADO
+    // ============================================================
+    function updateFloorOptions() {
+        const building = document.getElementById('reportBuilding')?.value;
+        if (!building) return;
+        const floorSelect = document.getElementById('reportFloor');
+        const spaceSelect = document.getElementById('reportSpace');
+        
+        floorSelect.innerHTML = '';
+        spaceSelect.innerHTML = '';
+        
+        const pisos = edificios[building]?.pisos || {};
+        Object.keys(pisos).forEach(piso => {
+            const option = document.createElement('option');
+            option.value = piso;
+            option.textContent = piso;
+            floorSelect.appendChild(option);
+        });
+        
+        if (floorSelect.options.length > 0) {
+            updateSpaceOptions();
+        }
+    }
+
+    function updateSpaceOptions() {
+        const building = document.getElementById('reportBuilding')?.value;
+        const floor = document.getElementById('reportFloor')?.value;
+        const spaceSelect = document.getElementById('reportSpace');
+        if (!building || !floor || !spaceSelect) return;
+        
+        spaceSelect.innerHTML = '';
+        const espacios = edificios[building]?.pisos?.[floor] || [];
+        espacios.forEach(espacio => {
+            const option = document.createElement('option');
+            option.value = espacio;
+            option.textContent = espacio;
+            spaceSelect.appendChild(option);
+        });
+    }
+
+    document.getElementById('reportBuilding')?.addEventListener('change', updateFloorOptions);
+    document.getElementById('reportFloor')?.addEventListener('change', updateSpaceOptions);
+
+    // ============================================================
+    //  CAPTURAR FOTOS
+    // ============================================================
+    function capturePhoto() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    photoData = ev.target.result;
+                    const preview = document.getElementById('photoPreview');
+                    preview.src = photoData;
+                    preview.classList.add('show');
+                    showToast('📷 Foto adjuntada', 'success');
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+        input.click();
+    }
+
+    function capturePhotoAdmin() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const preview = document.getElementById('photoPreviewAdmin');
+                    preview.src = ev.target.result;
+                    preview.classList.add('show');
+                    window.photoAdminData = ev.target.result;
+                    showToast('📷 Foto adjuntada', 'success');
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+        input.click();
+    }
+
+    function capturePhotoCierre() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    photoCierreData = ev.target.result;
+                    const preview = document.getElementById('photoCierrePreview');
+                    preview.src = photoCierreData;
+                    preview.classList.add('show');
+                    showToast('📷 Foto de evidencia adjuntada', 'success');
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+        input.click();
+    }
+
+    // ============================================================
+    //  ADMINISTRATIVO - CREAR TICKET
+    // ============================================================
+    async function submitTicketAdmin() {
+        if (isSubmitting) return;
+        
+        if (!currentUser || currentRole !== 'administrativo') {
+            showToast('⚠️ Solo los administrativos pueden reportar', 'error');
+            return;
+        }
+
+        const building = document.getElementById('reportBuildingAdmin').value;
+        const floor = document.getElementById('reportFloorAdmin').value;
+        const space = document.getElementById('reportSpaceAdmin').value;
+        const type = document.getElementById('reportTypeAdmin').value;
+        const priority = document.getElementById('reportPriorityAdmin').value;
+        const obs = document.getElementById('reportObsAdmin').value.trim();
+
+        if (!obs) {
+            showToast('⚠️ Escribí una observación', 'error');
+            return;
+        }
+
+        isSubmitting = true;
+        const btn = document.getElementById('btnCrearTicketAdmin');
+        btn.disabled = true;
+        btn.classList.add('loading');
+
+        const location = `${building} - ${floor} - ${space}`;
+
+        try {
+            await db.collection('tickets').add({
+                building: building,
+                floor: floor,
+                space: space,
+                location: location,
+                type: type,
+                obs: obs,
+                priority: priority,
+                status: 'pendiente',
+                photo: window.photoAdminData || '',
+                creadoPor: currentUser.name,
+                creadoPorId: currentUser.uid,
+                asignado: '',
+                completadoPor: '',
+                fechaCompletado: null,
+                fotoCierre: '',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            document.getElementById('reportObsAdmin').value = '';
+            document.getElementById('photoPreviewAdmin').classList.remove('show');
+            window.photoAdminData = null;
+            
+            showToast('✅ ¡Reporte enviado exitosamente!', 'success');
+            
+        } catch (error) {
+            showToast('❌ Error: ' + error.message, 'error');
+        } finally {
+            isSubmitting = false;
+            btn.disabled = false;
+            btn.classList.remove('loading');
+        }
+    }
+
+    // ============================================================
+    //  ENCARGADO - CREAR TICKET
+    // ============================================================
+    async function submitTicket() {
+        if (isSubmitting) return;
+        
+        if (!currentUser) {
+            showToast('⚠️ No autorizado', 'error');
+            return;
+        }
+
+        const rolConfig = ROLES[currentRole];
+        if (!rolConfig || !rolConfig.puedeCrear) {
+            showToast('⚠️ No tienes permisos para crear tickets', 'error');
+            return;
+        }
+
+        const building = document.getElementById('reportBuilding').value;
+        const floor = document.getElementById('reportFloor').value;
+        const space = document.getElementById('reportSpace').value;
+        const type = document.getElementById('reportType').value;
+        const priority = document.getElementById('reportPriority').value;
+        const obs = document.getElementById('reportObs').value.trim();
+
+        if (!obs) {
+            showToast('⚠️ Escribí una observación', 'error');
+            return;
+        }
+
+        isSubmitting = true;
+        const btn = document.getElementById('btnCrearTicket');
+        btn.disabled = true;
+        btn.classList.add('loading');
+
+        const location = `${building} - ${floor} - ${space}`;
+
+        try {
+            await db.collection('tickets').add({
+                building: building,
+                floor: floor,
+                space: space,
+                location: location,
+                type: type,
+                obs: obs,
+                priority: priority,
+                status: 'pendiente',
+                photo: photoData || '',
+                creadoPor: currentUser.name,
+                creadoPorId: currentUser.uid,
+                asignado: '',
+                completadoPor: '',
+                fechaCompletado: null,
+                fotoCierre: '',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            document.getElementById('reportObs').value = '';
+            document.getElementById('photoPreview').classList.remove('show');
+            photoData = null;
+            
+            showToast('✅ ¡Ticket creado exitosamente!', 'success');
+            
+            closeModule();
+            setTimeout(() => {
+                openModule('tickets');
+            }, 300);
+            
+        } catch (error) {
+            showToast('❌ Error: ' + error.message, 'error');
+        } finally {
+            isSubmitting = false;
+            btn.disabled = false;
+            btn.classList.remove('loading');
+        }
+    }
+
+    // ============================================================
+    //  ENCARGADO - TICKETS (CON FILTRO POR EDIFICIO SEGÚN ROL)
+    // ============================================================
+    function filterTicketsEncargado(filter, btn) {
+        encargadoFilter = filter;
+        document.querySelectorAll('#modTickets .filter-tabs button').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        renderTicketsEncargado(filter);
+    }
+
+    function renderTicketsEncargado(filter) {
+        const container = document.getElementById('ticketsEncargadoContainer');
+        let tickets = allTickets;
+
+        // Filtrar por edificios permitidos según rol
+        const rolConfig = ROLES[currentRole];
+        if (rolConfig && rolConfig.edificiosPermitidos) {
+            tickets = tickets.filter(t => rolConfig.edificiosPermitidos.includes(t.building));
+        }
+
+        if (filter === 'limpieza') {
+            tickets = tickets.filter(t => t.type === 'limpieza');
+        } else if (filter === 'mantenimiento') {
+            tickets = tickets.filter(t => t.type === 'mantenimiento');
+        } else if (filter === 'pendiente') {
+            tickets = tickets.filter(t => t.status === 'pendiente');
+        } else if (filter === 'completado') {
+            tickets = tickets.filter(t => t.status === 'completado');
+        }
+
+        if (tickets.length === 0) {
+            container.innerHTML = `<div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px;">No hay tickets</div>`;
+            return;
+        }
+
+        const typeLabels = { limpieza: '🧹 Limpieza', mantenimiento: '🔧 Mantenimiento' };
+        const statusLabels = { pendiente: 'Pendiente', enprogreso: 'En Progreso', completado: '✅ Completado' };
+
+        container.innerHTML = tickets.map(t => `
+            <div class="list-item" style="cursor:pointer;" onclick="openDetailTrabajador('${t.id}')">
+                <div class="item-left">
+                    <strong style="font-size:13px;color:#1a3a5c;">${t.id.slice(0, 8)}</strong>
+                    <div style="font-size:11px;color:#94a3b8;">${t.location || t.building}</div>
+                    <span class="ticket-edificio">${t.building}</span>
+                    ${t.fotoCierre ? `<div style="font-size:10px;color:#28a745;">📷 Con foto</div>` : ''}
+                </div>
+                <div class="item-right">
+                    <div style="font-size:11px;font-weight:600;color:#1a3a5c;">${typeLabels[t.type] || ''}</div>
+                    <div style="font-size:11px;color:${t.status === 'completado' ? '#28a745' : '#dc3545'};">${statusLabels[t.status] || t.status}</div>
+                    <div style="font-size:10px;color:#94a3b8;">${t.asignado || 'Sin asignar'}</div>
+                    ${t.completadoPor ? `<div style="font-size:9px;color:#28a745;">✅ ${t.completadoPor}</div>` : ''}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // ============================================================
+    //  TRABAJADOR - TICKETS ASIGNADOS (CON FILTRO POR EDIFICIO Y TIPO)
+    // ============================================================
+    function filterTicketsTrabajador(filter, btn) {
+        currentFilter = filter;
+        document.querySelectorAll('#viewTrabajador .filter-tabs button').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        renderTicketsTrabajador(filter);
+        closeDetailTrabajador();
+    }
+
+    function renderTicketsTrabajador(filter) {
+        const container = document.getElementById('ticketListTrabajador');
+        const rolConfig = ROLES[currentRole];
+        
+        let tickets = allTickets.filter(t => t.asignado === currentUser?.name);
+
+        // Filtrar por edificios permitidos según rol
+        if (rolConfig && rolConfig.edificiosPermitidos) {
+            tickets = tickets.filter(t => rolConfig.edificiosPermitidos.includes(t.building));
+        }
+
+        // Filtrar por tipo de trabajo (limpieza para mucamas, mantenimiento para técnicos)
+        if (rolConfig && rolConfig.tipoTrabajo) {
+            tickets = tickets.filter(t => t.type === rolConfig.tipoTrabajo);
+        }
+
+        if (filter !== 'all') {
+            tickets = tickets.filter(t => t.status === filter);
+        }
+
+        if (tickets.length === 0) {
+            container.innerHTML = `
+                <div style="text-align:center;padding:30px;color:#94a3b8;font-size:13px;">
+                    <div style="font-size:40px;margin-bottom:10px;">📭</div>
+                    No tienes tickets ${filter !== 'all' ? filter : ''} asignados
+                </div>
+            `;
+            return;
+        }
+
+        const priorityLabels = { urgente: '🔴 Urgente', media: '🟡 Media', baja: '🟢 Baja' };
+        const statusLabels = { pendiente: 'Pendiente', enprogreso: 'En Progreso', completado: '✅ Completado' };
+        const typeLabels = { limpieza: '🧹 Limpieza', mantenimiento: '🔧 Mantenimiento' };
+
+        container.innerHTML = tickets.map(t => `
+            <div class="ticket-card ${t.priority} ${t.status === 'completado' ? 'completado' : ''}" onclick="openDetailTrabajador('${t.id}')">
+                <div class="ticket-top">
+                    <span class="ticket-id">${t.id.slice(0, 8)}</span>
+                    <span class="ticket-estado ${t.status}">${statusLabels[t.status] || t.status}</span>
+                </div>
+                <div class="ticket-desc">${t.obs}</div>
+                <div class="ticket-meta">
+                    <span>📍 ${t.location || t.building}</span>
+                    <span class="ticket-type ${t.type}">${typeLabels[t.type] || t.type}</span>
+                    <span>${priorityLabels[t.priority] || t.priority}</span>
+                    <span class="ticket-edificio">${t.building}</span>
+                </div>
+                ${t.status === 'completado' ? `
+                    <div class="check-completado">✓</div>
+                    <div class="completado-por">✅ Completado por: ${t.completadoPor || 'N/A'}</div>
+                    ${t.fotoCierre ? `<div style="font-size:10px;color:#28a745;">📷 Con foto evidencia</div>` : ''}
+                ` : ''}
+                ${t.fotoCierre ? `<img src="${t.fotoCierre}" class="ticket-foto" />` : ''}
+            </div>
+        `).join('');
+    }
+
+    // ============================================================
+    //  DETALLE DE TICKET
+    // ============================================================
+    function openDetailTrabajador(id) {
+        const ticket = allTickets.find(t => t.id === id);
+        if (!ticket) return;
+        
+        const rolConfig = ROLES[currentRole];
+        
+        // Verificar acceso
+        if (!rolConfig.verTodos && ticket.asignado !== currentUser?.name && currentRole !== 'administrativo') {
+            showToast('⚠️ No tienes acceso a este ticket', 'error');
+            return;
+        }
+        
+        // Verificar edificio permitido
+        if (rolConfig.edificiosPermitidos && !rolConfig.edificiosPermitidos.includes(ticket.building)) {
+            showToast('⚠️ No tienes acceso a este edificio', 'error');
+            return;
+        }
+        
+        currentTicketId = id;
+        
+        const detail = document.getElementById('ticketDetailTrabajador');
+        detail.classList.add('open');
+        document.getElementById('dIdT').textContent = ticket.id.slice(0, 8);
+        document.getElementById('dLocationT').textContent = ticket.location || ticket.building + ' - ' + ticket.floor + ' - ' + ticket.space;
+        document.getElementById('dTypeT').textContent = ticket.type === 'limpieza' ? '🧹 Limpieza' : '🔧 Mantenimiento';
+        document.getElementById('dObsT').textContent = ticket.obs;
+        document.getElementById('dPriorityT').textContent = ticket.priority;
+        const statusLabels = { pendiente: 'Pendiente', enprogreso: 'En Progreso', completado: '✅ Completado' };
+        document.getElementById('dStatusT').textContent = statusLabels[ticket.status] || ticket.status;
+        document.getElementById('dAsignadoT').textContent = ticket.asignado || 'Sin asignar';
+        document.getElementById('dCompletadoPorT').textContent = ticket.completadoPor || 'No completado';
+        document.getElementById('dPhotoT').innerHTML = ticket.photo ? 
+            `<img src="${ticket.photo}" style="max-width:100%;max-height:150px;border-radius:8px;" />` : 
+            'Sin foto';
+        
+        const fotoCierreSection = document.getElementById('completarFotoSection');
+        const btnCompletar = document.getElementById('btnCompletarTicket');
+        
+        if (ticket.status === 'completado') {
+            btnCompletar.style.display = 'none';
+            fotoCierreSection.style.display = 'none';
+            if (ticket.fotoCierre) {
+                document.getElementById('dPhotoT').innerHTML = `
+                    <div style="margin-top:4px;">
+                        <strong style="font-size:12px;color:#28a745;">📷 Foto evidencia:</strong><br/>
+                        <img src="${ticket.fotoCierre}" style="max-width:100%;max-height:150px;border-radius:8px;border:1px solid #edf2f7;" />
+                    </div>
+                `;
+            }
+        } else if (rolConfig.puedeCompletar) {
+            btnCompletar.style.display = 'block';
+            fotoCierreSection.style.display = 'block';
+            photoCierreData = null;
+            document.getElementById('photoCierrePreview').classList.remove('show');
+            document.getElementById('photoCierrePreview').src = '';
+        } else {
+            btnCompletar.style.display = 'none';
+            fotoCierreSection.style.display = 'none';
+        }
+
+        // Para encargados: mostrar opciones de asignación
+        if (rolConfig.puedeAsignar && ticket.status !== 'completado') {
+            const existingSelect = document.getElementById('asignarSelect');
+            const existingBtn = document.querySelector('.asignar-btn');
+            if (existingSelect) existingSelect.remove();
+            if (existingBtn) existingBtn.remove();
+            
+            const container = document.createElement('div');
+            container.className = 'asignacion-container';
+            container.id = 'asignacionContainer';
+            
+            const typeSelect = document.createElement('select');
+            typeSelect.id = 'asignarTipoSelect';
+            typeSelect.innerHTML = `
+                <option value="">Seleccionar tipo...</option>
+                <option value="mucama_hotel">🧹 Mucama Hotel</option>
+                <option value="mucama_sede">🧹 Mucama Sede</option>
+                <option value="tecnico">🔧 Técnico</option>
+            `;
+            typeSelect.style.marginBottom = '8px';
+            
+            const userSelect = document.createElement('select');
+            userSelect.id = 'asignarSelect';
+            userSelect.innerHTML = '<option value="">Primero selecciona un tipo...</option>';
+            userSelect.style.marginBottom = '8px';
+            
+            const btn = document.createElement('button');
+            btn.className = 'btn-gold';
+            btn.textContent = '👤 Asignar';
+            btn.onclick = asignarTicket;
+            
+            container.appendChild(typeSelect);
+            container.appendChild(userSelect);
+            container.appendChild(btn);
+            
+            const detailDiv = document.getElementById('ticketDetailTrabajador');
+            const completarBtnEl = detailDiv.querySelector('.btn-success');
+            detailDiv.insertBefore(container, completarBtnEl);
+            
+            typeSelect.addEventListener('change', function() {
+                const tipo = this.value;
+                userSelect.innerHTML = '<option value="">Seleccionar usuario...</option>';
+                if (tipo) {
+                    const edificiosPermitidos = rolConfig.edificiosPermitidos || [];
+                    allUsers.forEach(u => {
+                        if (u.role === tipo && u.name !== currentUser?.name) {
+                            // Verificar que el usuario pueda trabajar en este edificio
+                            const userRolConfig = ROLES[u.role];
+                            if (userRolConfig) {
+                                const puedeEdificio = !userRolConfig.edificiosPermitidos || 
+                                    userRolConfig.edificiosPermitidos.some(e => edificiosPermitidos.includes(e));
+                                if (puedeEdificio) {
+                                    userSelect.innerHTML += `<option value="${u.name}">${u.name}</option>`;
+                                }
+                            }
+                        }
+                    });
+                    if (userSelect.options.length === 1) {
+                        userSelect.innerHTML = '<option value="">No hay usuarios disponibles</option>';
+                    }
+                }
+            });
+            
+            if (ticket.asignado) {
+                const usuario = allUsers.find(u => u.name === ticket.asignado);
+                if (usuario) {
+                    typeSelect.value = usuario.role;
+                    typeSelect.dispatchEvent(new Event('change'));
+                    setTimeout(() => {
+                        userSelect.value = ticket.asignado;
+                    }, 100);
+                }
+            }
+        }
+    }
+
+    function closeDetailTrabajador() {
+        document.getElementById('ticketDetailTrabajador').classList.remove('open');
+        currentTicketId = null;
+        photoCierreData = null;
+        document.getElementById('photoCierrePreview').classList.remove('show');
+        const container = document.getElementById('asignacionContainer');
+        if (container) container.remove();
+    }
+
+    function volverListaTrabajador() {
+        closeDetailTrabajador();
+        const list = document.getElementById('ticketListTrabajador');
+        if (list) {
+            list.scrollIntoView({ behavior: 'smooth' });
+        }
+        showToast('📋 Volviendo a la lista de tickets', 'info', 1500);
+    }
+
+    // ============================================================
+    //  ASIGNAR TICKET
+    // ============================================================
+    async function asignarTicket() {
+        if (!currentTicketId) return;
+        
+        const userSelect = document.getElementById('asignarSelect');
+        const typeSelect = document.getElementById('asignarTipoSelect');
+        
+        if (!userSelect || !typeSelect) {
+            showToast('⚠️ Error en el formulario de asignación', 'error');
+            return;
+        }
+        
+        const asignado = userSelect.value;
+        const tipo = typeSelect.value;
+        
+        if (!tipo) {
+            showToast('⚠️ Seleccioná un tipo de usuario', 'error');
+            return;
+        }
+        if (!asignado) {
+            showToast('⚠️ Seleccioná un usuario', 'error');
+            return;
+        }
+        
+        try {
+            const usuario = allUsers.find(u => u.name === asignado && u.role === tipo);
+            if (!usuario) {
+                showToast('⚠️ El usuario seleccionado no existe', 'error');
+                return;
+            }
+            
+            await db.collection('tickets').doc(currentTicketId).update({
+                asignado: asignado,
+                status: 'enprogreso'
+            });
+            showToast(`✅ Ticket asignado a ${asignado}`, 'success');
+            closeDetailTrabajador();
+            renderTicketsEncargado(encargadoFilter);
+            updateKPIs();
+        } catch (error) {
+            showToast('❌ Error: ' + error.message, 'error');
+        }
+    }
+
+    // ============================================================
+    //  COMPLETAR TICKET
+    // ============================================================
+    async function completarTicket() {
+        if (isCompleting) return;
+        if (!currentTicketId) return;
+        
+        const ticket = allTickets.find(t => t.id === currentTicketId);
+        if (!ticket) return;
+        
+        const rolConfig = ROLES[currentRole];
+        if (!rolConfig.puedeCompletar) {
+            showToast('⚠️ No puedes completar este ticket', 'error');
+            return;
+        }
+        
+        if (!confirm('¿Marcar este ticket como completado?')) return;
+
+        isCompleting = true;
+        const btn = document.getElementById('btnCompletarTicket');
+        btn.disabled = true;
+        btn.classList.add('loading');
+
+        try {
+            const updateData = {
+                status: 'completado',
+                completadoPor: currentUser.name,
+                fechaCompletado: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            if (photoCierreData) {
+                updateData.fotoCierre = photoCierreData;
+            }
+            
+            await db.collection('tickets').doc(currentTicketId).update(updateData);
+            
+            showToast(`✅ Ticket completado por ${currentUser.name}${photoCierreData ? ' 📷 con foto evidencia' : ''}`, 'success');
+            
+            closeDetailTrabajador();
+            
+            if (rolConfig.verTodos) {
+                renderTicketsEncargado(encargadoFilter);
+                updateKPIs();
+            } else {
+                renderTicketsTrabajador(currentFilter);
+                setTimeout(() => {
+                    volverListaTrabajador();
+                }, 500);
+            }
+        } catch (error) {
+            showToast('❌ Error: ' + error.message, 'error');
+        } finally {
+            isCompleting = false;
+            btn.disabled = false;
+            btn.classList.remove('loading');
+        }
+    }
+
+    // ============================================================
+    //  ENCARGADO - KPIs
+    // ============================================================
+    function updateKPIs() {
+        const rolConfig = ROLES[currentRole];
+        let tickets = allTickets;
+        
+        if (rolConfig && rolConfig.edificiosPermitidos) {
+            tickets = tickets.filter(t => rolConfig.edificiosPermitidos.includes(t.building));
+        }
+        
+        const total = tickets.length;
+        const pendientes = tickets.filter(t => t.status === 'pendiente').length;
+        const enprogreso = tickets.filter(t => t.status === 'enprogreso').length;
+        const completados = tickets.filter(t => t.status === 'completado').length;
+
+        document.getElementById('kpiTotal').textContent = total;
+        document.getElementById('kpiPendientes').textContent = pendientes;
+        document.getElementById('kpiProgreso').textContent = enprogreso;
+        document.getElementById('kpiCompletados').textContent = completados;
+    }
+
+    // ============================================================
+    //  ENCARGADO - COMPLETADOS
+    // ============================================================
+    function renderCompletados() {
+        const search = document.getElementById('completadosSearch')?.value.toLowerCase().trim() || '';
+        const from = document.getElementById('completadosDateFrom')?.value || '';
+        const to = document.getElementById('completadosDateTo')?.value || '';
+
+        const rolConfig = ROLES[currentRole];
+        let tickets = allTickets.filter(t => t.status === 'completado');
+        
+        if (rolConfig && rolConfig.edificiosPermitidos) {
+            tickets = tickets.filter(t => rolConfig.edificiosPermitidos.includes(t.building));
+        }
+
+        if (search) {
+            tickets = tickets.filter(t => 
+                t.obs.toLowerCase().includes(search) || 
+                t.location?.toLowerCase().includes(search) ||
+                (t.asignado && t.asignado.toLowerCase().includes(search)) ||
+                (t.completadoPor && t.completadoPor.toLowerCase().includes(search))
+            );
+        }
+
+        const container = document.getElementById('completadosContainer');
+        if (tickets.length === 0) {
+            container.innerHTML = '<div style="color:#94a3b8;text-align:center;padding:12px;font-size:13px;">No hay tickets completados</div>';
+            return;
+        }
+
+        container.innerHTML = tickets.map(t => `
+            <div class="list-item">
+                <div class="item-left">
+                    <strong style="font-size:13px;color:#1a3a5c;">${t.id.slice(0, 8)}</strong>
+                    <div style="font-size:11px;color:#94a3b8;">${t.location || t.building}</div>
+                    <span class="ticket-edificio">${t.building}</span>
+                    <div style="font-size:12px;color:#1e293b;margin-top:2px;">${t.obs}</div>
+                    <div style="font-size:11px;color:#28a745;margin-top:4px;">
+                        ✅ Completado por: <strong>${t.completadoPor || 'N/A'}</strong>
+                        ${t.fechaCompletado?.toDate ? ' | ' + t.fechaCompletado.toDate().toLocaleString() : ''}
+                        ${t.fotoCierre ? ' 📷 Con foto' : ''}
+                    </div>
+                    ${t.fotoCierre ? `<img src="${t.fotoCierre}" style="max-width:100%;max-height:60px;border-radius:6px;margin-top:4px;border:1px solid #edf2f7;" />` : ''}
+                </div>
+                <div class="item-right">
+                    <div style="font-size:11px;color:#94a3b8;">${t.asignado || 'Sin asignar'}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // ============================================================
+    //  ENCARGADO - PANEL
+    // ============================================================
+    function renderPanel() {
+        const container = document.getElementById('panelContainer');
+        const rolConfig = ROLES[currentRole];
+        let tickets = allTickets;
+        
+        if (rolConfig && rolConfig.edificiosPermitidos) {
+            tickets = tickets.filter(t => rolConfig.edificiosPermitidos.includes(t.building));
+        }
+        
+        const total = tickets.length;
+        const pendientes = tickets.filter(t => t.status === 'pendiente').length;
+        const enprogreso = tickets.filter(t => t.status === 'enprogreso').length;
+        const completados = tickets.filter(t => t.status === 'completado').length;
+        const urgentes = tickets.filter(t => t.priority === 'urgente').length;
+        const limpieza = tickets.filter(t => t.type === 'limpieza').length;
+        const mantenimiento = tickets.filter(t => t.type === 'mantenimiento').length;
+
+        container.innerHTML = `
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
+                <div style="background:#f8fafc;border-radius:12px;padding:12px;text-align:center;border:1px solid #edf2f7;">
+                    <div style="font-size:20px;font-weight:800;color:#1a3a5c;">${total}</div>
+                    <div style="font-size:10px;color:#94a3b8;">Total</div>
+                </div>
+                <div style="background:#fee2e2;border-radius:12px;padding:12px;text-align:center;border:1px solid #fecaca;">
+                    <div style="font-size:20px;font-weight:800;color:#dc3545;">${urgentes}</div>
+                    <div style="font-size:10px;color:#94a3b8;">Urgentes</div>
+                </div>
+                <div style="background:#d1fae5;border-radius:12px;padding:12px;text-align:center;border:1px solid #a7f3d0;">
+                    <div style="font-size:20px;font-weight:800;color:#28a745;">${completados}</div>
+                    <div style="font-size:10px;color:#94a3b8;">Completados</div>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+                <div style="background:#f8fafc;border-radius:12px;padding:12px;text-align:center;border:1px solid #edf2f7;">
+                    <div style="font-size:18px;font-weight:700;color:#1a3a5c;">${limpieza}</div>
+                    <div style="font-size:10px;color:#94a3b8;">🧹 Limpieza</div>
+                </div>
+                <div style="background:#f8fafc;border-radius:12px;padding:12px;text-align:center;border:1px solid #edf2f7;">
+                    <div style="font-size:18px;font-weight:700;color:#1a3a5c;">${mantenimiento}</div>
+                    <div style="font-size:10px;color:#94a3b8;">🔧 Mantenimiento</div>
+                </div>
+            </div>
+            <div style="background:#f8fafc;border-radius:12px;padding:12px;text-align:center;border:1px solid #edf2f7;">
+                <div style="display:flex;gap:4px;justify-content:center;align-items:flex-end;height:50px;">
+                    ${['Pendientes', 'En Progreso', 'Completados'].map((label, i) => {
+                        const vals = [pendientes, enprogreso, completados];
+                        const max = Math.max(1, ...vals);
+                        const h = Math.max(6, (vals[i] / max) * 35);
+                        const colors = ['#dc3545', '#ffd700', '#28a745'];
+                        return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;">
+                            <div style="width:100%;background:${colors[i]};border-radius:4px 4px 0 0;height:${h}px;min-height:6px;"></div>
+                            <span style="font-size:8px;color:#94a3b8;">${label}</span>
+                            <span style="font-size:11px;font-weight:600;">${vals[i]}</span>
+                        </div>`;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    // ============================================================
+    //  ENCARGADO - UBICACIONES
+    // ============================================================
+    function renderUbicaciones() {
+        const container = document.getElementById('ubicacionesContainer');
+        let html = '';
+        
+        const rolConfig = ROLES[currentRole];
+        const edificiosPermitidos = rolConfig?.edificiosPermitidos || Object.keys(edificios);
+        
+        Object.keys(edificios).forEach(edificio => {
+            if (!edificiosPermitidos.includes(edificio)) return;
+            html += `<div style="margin-bottom:8px;"><div style="font-weight:700;color:#1a3a5c;font-size:14px;">🏢 ${edificio}</div>`;
+            const pisos = edificios[edificio].pisos;
+            Object.keys(pisos).forEach(piso => {
+                html += `<div style="margin-left:16px;margin-top:4px;"><div style="font-weight:600;color:#2a5a8a;font-size:13px;">📐 ${piso}</div>`;
+                html += `<div style="margin-left:16px;">`;
+                pisos[piso].forEach(espacio => {
+                    html += `<div style="color:#475569;font-size:12px;padding:2px 0;">🚪 ${espacio}</div>`;
+                });
+                html += `</div></div>`;
+            });
+            html += `</div>`;
+        });
+        
+        container.innerHTML = html;
+    }
+
+    // ============================================================
+    //  ENCARGADO - USUARIOS
+    // ============================================================
+    async function loadUsers() {
+        const container = document.getElementById('usuariosContainer');
+        try {
+            const snapshot = await db.collection('usuarios').get();
+            allUsers = [];
+            snapshot.forEach(doc => allUsers.push({ id: doc.id, ...doc.data() }));
+
+            if (allUsers.length === 0) {
+                container.innerHTML = '<div style="color:#94a3b8;text-align:center;padding:12px;font-size:13px;">No hay usuarios</div>';
+                return;
+            }
+
+            const roleEmoji = {
+                encargado_general: '👔',
+                encargado_hotel: '🏨',
+                encargado_sede: '🏢',
+                mucama_hotel: '🧹',
+                mucama_sede: '🧹',
+                tecnico: '🔧',
+                administrativo: '📋'
+            };
+            const roleLabels = {
+                encargado_general: 'Enc. General',
+                encargado_hotel: 'Enc. Hotel',
+                encargado_sede: 'Enc. Sede',
+                mucama_hotel: 'Mucama Hotel',
+                mucama_sede: 'Mucama Sede',
+                tecnico: 'Técnico',
+                administrativo: 'Admin.'
+            };
+            
+            container.innerHTML = allUsers.map(u => `
+                <div class="list-item">
+                    <div class="item-left">
+                        <strong style="font-size:13px;color:#1a3a5c;">${u.name}</strong>
+                        <div style="font-size:11px;color:#94a3b8;">${u.email}</div>
+                    </div>
+                    <div class="item-right">
+                        <span style="font-size:11px;font-weight:600;color:#1a3a5c;">${roleEmoji[u.role] || '👤'} ${roleLabels[u.role] || u.role}</span>
+                    </div>
+                </div>
+            `).join('');
+        } catch (error) {
+            container.innerHTML = '<div style="color:#dc3545;text-align:center;padding:12px;">Error cargando usuarios</div>';
+        }
+    }
+
+    // ============================================================
+    //  ENCARGADO - MÓDULOS
+    // ============================================================
+    let currentModule = null;
+
+    function openModule(mod) {
+        document.querySelectorAll('.module-panel').forEach(m => m.classList.remove('open'));
+        const target = document.getElementById('mod' + mod.charAt(0).toUpperCase() + mod.slice(1));
+        if (target) {
+            target.classList.add('open');
+            currentModule = mod;
+            if (mod === 'completados') renderCompletados();
+            if (mod === 'panel') renderPanel();
+            if (mod === 'ubicaciones') renderUbicaciones();
+            if (mod === 'usuarios') loadUsers();
+            if (mod === 'tickets') renderTicketsEncargado(encargadoFilter);
+            if (mod === 'nuevo') updateFloorOptions();
+        }
+    }
+
+    function closeModule() {
+        document.querySelectorAll('.module-panel').forEach(m => m.classList.remove('open'));
+        currentModule = null;
+    }
+
+    // ============================================================
+    //  INICIO
+    // ============================================================
+    console.log('🏛️ Mantenimiento CSPFA - Círculo de Suboficiales');
+    console.log('📋 Estructura de edificios cargada');
+    console.log('👥 Roles implementados:');
+    console.log('   👔 Encargado General: Ve TODOS los edificios');
+    console.log('   🏨 Encargado Hotel: Solo ve Hoteles');
+    console.log('   🏢 Encargado Sede: Solo ve Sede');
+    console.log('   🧹 Mucama Hotel: Tickets de limpieza en hoteles');
+    console.log('   🧹 Mucama Sede: Tickets de limpieza en sede');
+    console.log('   🔧 Técnico: Tickets de mantenimiento en todos los edificios');
+    console.log('   📋 Administrativo: Solo puede crear reportes');
+    console.log('✅ Al completar un ticket, se registra el usuario y puede subir foto evidencia');
+</script>
+</body>
+</html>
