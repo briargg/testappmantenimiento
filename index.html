@@ -1103,14 +1103,11 @@
     }
 
     let auth, db;
-    try {
-        firebase.initializeApp(firebaseConfig);
-        auth = firebase.auth();
-        db = firebase.firestore();
-    } catch (e) {
-        console.error('Error al inicializar Firebase:', e);
-        mostrarErrorCarga('⚠️ No se pudo inicializar Firebase.<br>' + esc(e.message));
-    }
+   try {
+    firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
+    db = firebase.firestore('xextails');  // ✅ Ahora usa la base correcta
+} catch (e) {
 
     // FIX: si a los 8 segundos onAuthStateChanged todavía no respondió,
     // asumimos que algo falló (dominio no autorizado en Firebase Auth,
