@@ -1102,31 +1102,33 @@
         }
     }
 
-    let auth, db;
-   try {
+   let auth, db;
+try {
     firebase.initializeApp(firebaseConfig);
     auth = firebase.auth();
-    db = firebase.firestore('xextails');  // ✅ Ahora usa la base correcta
+    db = firebase.firestore('xextails');  // ✅ CORREGIDO: xextails (no xxtails)
+    console.log('✅ Conectado a Firestore (base: xextails)');
 } catch (e) {
+    console.error('Error al inicializar Firebase:', e);
+    mostrarErrorCarga('⚠️ No se pudo inicializar Firebase.<br>' + esc(e.message));
+}  // ✅ AHORA EL CATCH ESTÁ BIEN CERRADO
 
-    // FIX: si a los 8 segundos onAuthStateChanged todavía no respondió,
-    // asumimos que algo falló (dominio no autorizado en Firebase Auth,
-    // sin conexión, API key restringida, etc.) y avisamos en vez de
-    // dejar el spinner girando para siempre.
-    let authRespondio = false;
-    setTimeout(() => {
-        if (!authRespondio) {
-            mostrarErrorCarga(
-                '⚠️ No se pudo conectar con Firebase después de 8 segundos.<br><br>' +
-                'Causas más comunes:<br>' +
-                '• Este dominio no está autorizado en Firebase Auth<br>' +
-                '(Firebase Console → Authentication → Settings → Authorized domains)<br>' +
-                '• Se está abriendo con file:// en vez de http(s)://<br>' +
-                '• Sin conexión a internet o bloqueo de red<br><br>' +
-                'Revisá la consola del navegador (F12) para ver el error exacto.'
-            );
-        }
-    }, 8000);
+// FIX: si a los 8 segundos onAuthStateChanged todavía no respondió,
+// asumimos que algo falló...
+let authRespondio = false;
+setTimeout(() => {
+    if (!authRespondio) {
+        mostrarErrorCarga(
+            '⚠️ No se pudo conectar con Firebase después de 8 segundos.<br><br>' +
+            'Causas más comunes:<br>' +
+            '• Este dominio no está autorizado en Firebase Auth<br>' +
+            '(Firebase Console → Authentication → Settings → Authorized domains)<br>' +
+            '• Se está abriendo con file:// en vez de http(s)://<br>' +
+            '• Sin conexión a internet o bloqueo de red<br><br>' +
+            'Revisá la consola del navegador (F12) para ver el error exacto.'
+        );
+    }
+}, 8000);
 
     // ============================================================
     //  UTILIDAD: escape de HTML (fix XSS)
