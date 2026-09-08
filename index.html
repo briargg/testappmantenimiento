@@ -782,9 +782,9 @@
 <div id="app">
     <!-- LOADING -->
     <div id="loadingScreen">
-        <div class="spinner"></div>
+        <div class="spinner" id="loadingSpinner"></div>
         <div class="loading-title">CSPFA</div>
-        <div class="loading-sub">Mantenimiento y Limpieza</div>
+        <div class="loading-sub" id="loadingSub">Mantenimiento y Limpieza</div>
     </div>
 
     <!-- AUTH -->
@@ -797,16 +797,16 @@
         </div>
         <div class="auth-form" id="loginForm">
             <div class="auth-error" id="authError"></div>
-            <input type="email" id="loginEmail" placeholder="Email" />
-            <input type="password" id="loginPassword" placeholder="Contraseña" />
+            <input type="email" id="loginEmail" placeholder="Email" autocomplete="username" />
+            <input type="password" id="loginPassword" placeholder="Contraseña" autocomplete="current-password" />
             <button onclick="handleLogin()">Ingresar</button>
             <button class="toggle-auth" onclick="showRegister()">¿No tenés cuenta? Registrate</button>
         </div>
         <div class="auth-form hidden" id="registerForm">
             <div class="auth-error" id="regError"></div>
-            <input type="text" id="regName" placeholder="Nombre completo" />
-            <input type="email" id="regEmail" placeholder="Email" />
-            <input type="password" id="regPassword" placeholder="Contraseña (mínimo 6 caracteres)" />
+            <input type="text" id="regName" placeholder="Nombre completo" autocomplete="name" />
+            <input type="email" id="regEmail" placeholder="Email" autocomplete="username" />
+            <input type="password" id="regPassword" placeholder="Contraseña (mínimo 6 caracteres)" autocomplete="new-password" />
             <select id="regRole">
                 <option value="encargado_general">👔 Encargado General</option>
                 <option value="encargado_hotel">🏨 Encargado Hotel</option>
@@ -1031,32 +1031,40 @@
                 <div class="ticket-list" id="ticketListTrabajador">
                     <div style="text-align:center;padding:30px;color:#94a3b8;font-size:13px;">Cargando tickets...</div>
                 </div>
-
-                <div class="ticket-detail card" id="ticketDetailTrabajador">
-                    <div class="card-title" id="detailTitleTrabajador">Detalle del ticket</div>
-                    <div class="detail-row"><span class="detail-label">ID</span><span class="detail-value" id="dIdT">-</span></div>
-                    <div class="detail-row"><span class="detail-label">Ubicación</span><span class="detail-value" id="dLocationT">-</span></div>
-                    <div class="detail-row"><span class="detail-label">Tipo</span><span class="detail-value" id="dTypeT">-</span></div>
-                    <div class="detail-row"><span class="detail-label">Observación</span><span class="detail-value" id="dObsT">-</span></div>
-                    <div class="detail-row"><span class="detail-label">Prioridad</span><span class="detail-value" id="dPriorityT">-</span></div>
-                    <div class="detail-row"><span class="detail-label">Estado</span><span class="detail-value" id="dStatusT">-</span></div>
-                    <div class="detail-row"><span class="detail-label">Asignado a</span><span class="detail-value" id="dAsignadoT">-</span></div>
-                    <div class="detail-row"><span class="detail-label">Completado por</span><span class="detail-value" id="dCompletadoPorT">-</span></div>
-                    <div class="detail-row"><span class="detail-label">Foto</span><span class="detail-value" id="dPhotoT">-</span></div>
-                    
-                    <div id="completarFotoSection" style="display:none;">
-                        <div class="photo-btn" onclick="capturePhotoCierre()">📷 Subir foto de evidencia</div>
-                        <img id="photoCierrePreview" class="photo-preview" alt="Foto evidencia" />
-                    </div>
-                    
-                    <button class="btn-success" id="btnCompletarTicket" onclick="completarTicket()">
-                        <span class="btn-text">✅ Marcar como completado</span>
-                        <span class="spinner-small"></span>
-                    </button>
-                    <button class="btn-gold" onclick="volverListaTrabajador()" style="margin-top:4px;">← Volver a la lista</button>
-                    <button class="close-detail" onclick="closeDetailTrabajador()">✕ Cerrar detalle</button>
-                </div>
             </div>
+        </div>
+
+        <!-- ================================================================
+             DETALLE DE TICKET
+             FIX: este panel estaba antes anidado dentro de #viewTrabajador,
+             que queda con display:none para roles de Encargado. Eso hacía
+             que los Encargados no pudieran ver el detalle ni asignar tickets.
+             Ahora vive como hermano directo dentro de #appContent, visible
+             sin importar qué role-view esté activo.
+        ================================================================= -->
+        <div class="ticket-detail card" id="ticketDetailTrabajador">
+            <div class="card-title" id="detailTitleTrabajador">Detalle del ticket</div>
+            <div class="detail-row"><span class="detail-label">ID</span><span class="detail-value" id="dIdT">-</span></div>
+            <div class="detail-row"><span class="detail-label">Ubicación</span><span class="detail-value" id="dLocationT">-</span></div>
+            <div class="detail-row"><span class="detail-label">Tipo</span><span class="detail-value" id="dTypeT">-</span></div>
+            <div class="detail-row"><span class="detail-label">Observación</span><span class="detail-value" id="dObsT">-</span></div>
+            <div class="detail-row"><span class="detail-label">Prioridad</span><span class="detail-value" id="dPriorityT">-</span></div>
+            <div class="detail-row"><span class="detail-label">Estado</span><span class="detail-value" id="dStatusT">-</span></div>
+            <div class="detail-row"><span class="detail-label">Asignado a</span><span class="detail-value" id="dAsignadoT">-</span></div>
+            <div class="detail-row"><span class="detail-label">Completado por</span><span class="detail-value" id="dCompletadoPorT">-</span></div>
+            <div class="detail-row"><span class="detail-label">Foto</span><span class="detail-value" id="dPhotoT">-</span></div>
+
+            <div id="completarFotoSection" style="display:none;">
+                <div class="photo-btn" onclick="capturePhotoCierre()">📷 Subir foto de evidencia</div>
+                <img id="photoCierrePreview" class="photo-preview" alt="Foto evidencia" />
+            </div>
+
+            <button class="btn-success" id="btnCompletarTicket" onclick="completarTicket()">
+                <span class="btn-text">✅ Marcar como completado</span>
+                <span class="spinner-small"></span>
+            </button>
+            <button class="btn-gold" onclick="volverListaTrabajador()" style="margin-top:4px;">← Volver a la lista</button>
+            <button class="close-detail" onclick="closeDetailTrabajador()">✕ Cerrar detalle</button>
         </div>
     </div>
 </div>
@@ -1078,9 +1086,91 @@
         measurementId: "G-XKHG2JNLXT"
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
+    // FIX: si Firebase no puede inicializar (API key rechazada, dominio no
+    // autorizado, sin conexión, etc.), antes la app se quedaba en el spinner
+    // de "CSPFA cargando" para siempre y sin ningún mensaje. Ahora se
+    // muestra el motivo en pantalla en vez de colgarse en silencio.
+    function mostrarErrorCarga(mensaje) {
+        const spinner = document.getElementById('loadingSpinner');
+        const sub = document.getElementById('loadingSub');
+        if (spinner) spinner.style.display = 'none';
+        if (sub) {
+            sub.innerHTML = mensaje;
+            sub.style.color = '#dc3545';
+            sub.style.padding = '0 12px';
+            sub.style.lineHeight = '1.5';
+        }
+    }
+
+    let auth, db;
+    try {
+        firebase.initializeApp(firebaseConfig);
+        auth = firebase.auth();
+        db = firebase.firestore();
+    } catch (e) {
+        console.error('Error al inicializar Firebase:', e);
+        mostrarErrorCarga('⚠️ No se pudo inicializar Firebase.<br>' + esc(e.message));
+    }
+
+    // FIX: si a los 8 segundos onAuthStateChanged todavía no respondió,
+    // asumimos que algo falló (dominio no autorizado en Firebase Auth,
+    // sin conexión, API key restringida, etc.) y avisamos en vez de
+    // dejar el spinner girando para siempre.
+    let authRespondio = false;
+    setTimeout(() => {
+        if (!authRespondio) {
+            mostrarErrorCarga(
+                '⚠️ No se pudo conectar con Firebase después de 8 segundos.<br><br>' +
+                'Causas más comunes:<br>' +
+                '• Este dominio no está autorizado en Firebase Auth<br>' +
+                '(Firebase Console → Authentication → Settings → Authorized domains)<br>' +
+                '• Se está abriendo con file:// en vez de http(s)://<br>' +
+                '• Sin conexión a internet o bloqueo de red<br><br>' +
+                'Revisá la consola del navegador (F12) para ver el error exacto.'
+            );
+        }
+    }, 8000);
+
+    // ============================================================
+    //  UTILIDAD: escape de HTML (fix XSS)
+    //  Cualquier texto libre escrito por un usuario (observación,
+    //  nombre, ubicación, etc.) se inserta con innerHTML en varias
+    //  partes. Sin escapar, alguien podría inyectar HTML/JS. Se usa
+    //  esta función en todos los templates que muestran texto libre.
+    // ============================================================
+    function esc(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c]));
+    }
+
+    // ============================================================
+    //  UTILIDAD: redimensionar/comprimir foto antes de guardar
+    //  FIX: Firestore tiene un límite de 1MB por documento. Subir
+    //  fotos de cámara sin comprimir puede hacer fallar la creación
+    //  del ticket. Esto reduce el ancho a max 1000px y comprime a
+    //  JPEG calidad 0.7 antes de convertir a base64.
+    //  (Ideal a futuro: mover a Firebase Storage y guardar solo URL.)
+    // ============================================================
+    function resizeImage(dataUrl, maxWidth = 1000, quality = 0.7) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                let { width, height } = img;
+                if (width > maxWidth) {
+                    height = Math.round(height * (maxWidth / width));
+                    width = maxWidth;
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.onerror = () => resolve(dataUrl);
+            img.src = dataUrl;
+        });
+    }
 
     // ============================================================
     //  ESTRUCTURA DE EDIFICIOS
@@ -1132,6 +1222,12 @@
 
     // ============================================================
     //  ROLES Y PERMISOS
+    //  NOTA DE SEGURIDAD: esta tabla solo controla qué se MUESTRA
+    //  en el cliente. No reemplaza reglas de seguridad de Firestore.
+    //  Cualquier usuario logueado puede llamar a db.collection(...)
+    //  directamente desde la consola del navegador. Para que estos
+    //  permisos sean reales hace falta reflejar esta misma lógica
+    //  en Firestore Security Rules (ver notas al final del archivo).
     // ============================================================
     const ROLES = {
         encargado_general: {
@@ -1214,6 +1310,12 @@
     let qrInstance = null;
     let isSubmitting = false;
     let isCompleting = false;
+    let unsubscribeTickets = null; // FIX: guardamos el unsubscribe del listener de tickets
+    let openedFromTrabajadorView = false; // recuerda a qué lista volver al cerrar el detalle
+
+    // FIX: leer el parámetro ?quick=true del QR una sola vez al cargar
+    const urlParams = new URLSearchParams(window.location.search);
+    const isQuickReport = urlParams.get('quick') === 'true';
 
     // ============================================================
     //  TOAST
@@ -1276,8 +1378,10 @@
             });
             document.getElementById('regError').innerHTML = '';
             showToast('✅ Registro exitoso!', 'success');
-            await auth.signOut();
-            await auth.signInWithEmailAndPassword(email, password);
+            // FIX: createUserWithEmailAndPassword ya deja al usuario logueado.
+            // El signOut + signIn anterior era un viaje de red innecesario
+            // (y un punto de falla extra). onAuthStateChanged ya se dispara
+            // solo con la sesión creada arriba.
         } catch (error) {
             console.error('Error de registro:', error);
             
@@ -1326,6 +1430,8 @@
 
     async function handleLogout() {
         try {
+            // FIX: cancelar el listener de tickets antes de cerrar sesión
+            if (unsubscribeTickets) { unsubscribeTickets(); unsubscribeTickets = null; }
             await auth.signOut();
             showToast('👋 Sesión cerrada', 'info');
         } catch (error) {
@@ -1336,7 +1442,8 @@
     // ============================================================
     //  MONITOREO DE AUTENTICACIÓN
     // ============================================================
-    auth.onAuthStateChanged(async (user) => {
+    auth?.onAuthStateChanged(async (user) => {
+        authRespondio = true;
         if (user) {
             document.getElementById('loadingScreen').style.display = 'none';
             
@@ -1395,6 +1502,12 @@
                     loadUsers();
                     renderTicketsEncargado('all');
                 }
+
+                // FIX: si vino del QR de "reporte rápido", abrir directo el
+                // formulario de creación de ticket (para roles que pueden crear).
+                if (isQuickReport && currentRole !== 'administrativo' && rolConfig.puedeCrear) {
+                    openModule('nuevo');
+                }
             } else {
                 await db.collection('usuarios').doc(user.uid).set({
                     uid: user.uid,
@@ -1410,16 +1523,29 @@
             document.getElementById('authScreen').style.display = 'flex';
             document.getElementById('authScreen').classList.add('active');
             document.getElementById('appContainer').classList.remove('active');
+            if (unsubscribeTickets) { unsubscribeTickets(); unsubscribeTickets = null; }
             currentUser = null;
             currentRole = null;
         }
+    }, (error) => {
+        // FIX: onAuthStateChanged también puede recibir un error (p. ej.
+        // API key inválida o dominio no autorizado). Antes esto no se
+        // capturaba y la app quedaba muda con el spinner girando.
+        authRespondio = true;
+        console.error('Error de Firebase Auth:', error);
+        mostrarErrorCarga('⚠️ Error de Firebase Auth:<br>' + esc(error.message));
     });
 
     // ============================================================
     //  CARGA DE DATOS EN TIEMPO REAL
     // ============================================================
     function loadData() {
-        db.collection('tickets').orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
+        // FIX: si ya había un listener activo (p. ej. onAuthStateChanged
+        // se disparó más de una vez, como al refrescar el token), lo
+        // cancelamos antes de crear uno nuevo para no duplicar renders.
+        if (unsubscribeTickets) { unsubscribeTickets(); unsubscribeTickets = null; }
+
+        unsubscribeTickets = db.collection('tickets').orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
             allTickets = [];
             snapshot.forEach(doc => {
                 allTickets.push({ id: doc.id, ...doc.data() });
@@ -1571,7 +1697,7 @@
     document.getElementById('reportFloor')?.addEventListener('change', updateSpaceOptions);
 
     // ============================================================
-    //  CAPTURAR FOTOS
+    //  CAPTURAR FOTOS (con redimensionado antes de guardar)
     // ============================================================
     function capturePhoto() {
         const input = document.createElement('input');
@@ -1581,8 +1707,8 @@
             const file = e.target.files[0];
             if (file) {
                 const reader = new FileReader();
-                reader.onload = (ev) => {
-                    photoData = ev.target.result;
+                reader.onload = async (ev) => {
+                    photoData = await resizeImage(ev.target.result);
                     const preview = document.getElementById('photoPreview');
                     preview.src = photoData;
                     preview.classList.add('show');
@@ -1602,11 +1728,12 @@
             const file = e.target.files[0];
             if (file) {
                 const reader = new FileReader();
-                reader.onload = (ev) => {
+                reader.onload = async (ev) => {
+                    const resized = await resizeImage(ev.target.result);
                     const preview = document.getElementById('photoPreviewAdmin');
-                    preview.src = ev.target.result;
+                    preview.src = resized;
                     preview.classList.add('show');
-                    window.photoAdminData = ev.target.result;
+                    window.photoAdminData = resized;
                     showToast('📷 Foto adjuntada', 'success');
                 };
                 reader.readAsDataURL(file);
@@ -1623,8 +1750,8 @@
             const file = e.target.files[0];
             if (file) {
                 const reader = new FileReader();
-                reader.onload = (ev) => {
-                    photoCierreData = ev.target.result;
+                reader.onload = async (ev) => {
+                    photoCierreData = await resizeImage(ev.target.result);
                     const preview = document.getElementById('photoCierrePreview');
                     preview.src = photoCierreData;
                     preview.classList.add('show');
@@ -1680,6 +1807,7 @@
                 creadoPor: currentUser.name,
                 creadoPorId: currentUser.uid,
                 asignado: '',
+                asignadoUid: '',
                 completadoPor: '',
                 fechaCompletado: null,
                 fotoCierre: '',
@@ -1751,6 +1879,7 @@
                 creadoPor: currentUser.name,
                 creadoPorId: currentUser.uid,
                 asignado: '',
+                asignadoUid: '',
                 completadoPor: '',
                 fechaCompletado: null,
                 fotoCierre: '',
@@ -1815,19 +1944,22 @@
         const typeLabels = { limpieza: '🧹 Limpieza', mantenimiento: '🔧 Mantenimiento' };
         const statusLabels = { pendiente: 'Pendiente', enprogreso: 'En Progreso', completado: '✅ Completado' };
 
+        // FIX: openDetailTrabajador ahora recibe un segundo parámetro para
+        // saber que se abrió desde la vista de Encargado (y así "Volver a
+        // la lista" sepa a qué lista volver).
         container.innerHTML = tickets.map(t => `
-            <div class="list-item" style="cursor:pointer;" onclick="openDetailTrabajador('${t.id}')">
+            <div class="list-item" style="cursor:pointer;" onclick="openDetailTrabajador('${t.id}', false)">
                 <div class="item-left">
-                    <strong style="font-size:13px;color:#1a3a5c;">${t.id.slice(0, 8)}</strong>
-                    <div style="font-size:11px;color:#94a3b8;">${t.location || t.building}</div>
-                    <span class="ticket-edificio">${t.building}</span>
+                    <strong style="font-size:13px;color:#1a3a5c;">${esc(t.id.slice(0, 8))}</strong>
+                    <div style="font-size:11px;color:#94a3b8;">${esc(t.location || t.building)}</div>
+                    <span class="ticket-edificio">${esc(t.building)}</span>
                     ${t.fotoCierre ? `<div style="font-size:10px;color:#28a745;">📷 Con foto</div>` : ''}
                 </div>
                 <div class="item-right">
                     <div style="font-size:11px;font-weight:600;color:#1a3a5c;">${typeLabels[t.type] || ''}</div>
-                    <div style="font-size:11px;color:${t.status === 'completado' ? '#28a745' : '#dc3545'};">${statusLabels[t.status] || t.status}</div>
-                    <div style="font-size:10px;color:#94a3b8;">${t.asignado || 'Sin asignar'}</div>
-                    ${t.completadoPor ? `<div style="font-size:9px;color:#28a745;">✅ ${t.completadoPor}</div>` : ''}
+                    <div style="font-size:11px;color:${t.status === 'completado' ? '#28a745' : '#dc3545'};">${statusLabels[t.status] || esc(t.status)}</div>
+                    <div style="font-size:10px;color:#94a3b8;">${esc(t.asignado || 'Sin asignar')}</div>
+                    ${t.completadoPor ? `<div style="font-size:9px;color:#28a745;">✅ ${esc(t.completadoPor)}</div>` : ''}
                 </div>
             </div>
         `).join('');
@@ -1848,7 +1980,13 @@
         const container = document.getElementById('ticketListTrabajador');
         const rolConfig = ROLES[currentRole];
         
-        let tickets = allTickets.filter(t => t.asignado === currentUser?.name);
+        // FIX: se compara primero por uid (asignadoUid); se mantiene el
+        // filtro por nombre como respaldo para tickets viejos que no
+        // tengan asignadoUid todavía.
+        let tickets = allTickets.filter(t =>
+            (t.asignadoUid && t.asignadoUid === currentUser?.uid) ||
+            (!t.asignadoUid && t.asignado === currentUser?.name)
+        );
 
         // Filtrar por edificios permitidos según rol
         if (rolConfig && rolConfig.edificiosPermitidos) {
@@ -1868,7 +2006,7 @@
             container.innerHTML = `
                 <div style="text-align:center;padding:30px;color:#94a3b8;font-size:13px;">
                     <div style="font-size:40px;margin-bottom:10px;">📭</div>
-                    No tienes tickets ${filter !== 'all' ? filter : ''} asignados
+                    No tienes tickets ${filter !== 'all' ? esc(filter) : ''} asignados
                 </div>
             `;
             return;
@@ -1879,21 +2017,21 @@
         const typeLabels = { limpieza: '🧹 Limpieza', mantenimiento: '🔧 Mantenimiento' };
 
         container.innerHTML = tickets.map(t => `
-            <div class="ticket-card ${t.priority} ${t.status === 'completado' ? 'completado' : ''}" onclick="openDetailTrabajador('${t.id}')">
+            <div class="ticket-card ${t.priority} ${t.status === 'completado' ? 'completado' : ''}" onclick="openDetailTrabajador('${t.id}', true)">
                 <div class="ticket-top">
-                    <span class="ticket-id">${t.id.slice(0, 8)}</span>
-                    <span class="ticket-estado ${t.status}">${statusLabels[t.status] || t.status}</span>
+                    <span class="ticket-id">${esc(t.id.slice(0, 8))}</span>
+                    <span class="ticket-estado ${t.status}">${statusLabels[t.status] || esc(t.status)}</span>
                 </div>
-                <div class="ticket-desc">${t.obs}</div>
+                <div class="ticket-desc">${esc(t.obs)}</div>
                 <div class="ticket-meta">
-                    <span>📍 ${t.location || t.building}</span>
-                    <span class="ticket-type ${t.type}">${typeLabels[t.type] || t.type}</span>
-                    <span>${priorityLabels[t.priority] || t.priority}</span>
-                    <span class="ticket-edificio">${t.building}</span>
+                    <span>📍 ${esc(t.location || t.building)}</span>
+                    <span class="ticket-type ${t.type}">${typeLabels[t.type] || esc(t.type)}</span>
+                    <span>${priorityLabels[t.priority] || esc(t.priority)}</span>
+                    <span class="ticket-edificio">${esc(t.building)}</span>
                 </div>
                 ${t.status === 'completado' ? `
                     <div class="check-completado">✓</div>
-                    <div class="completado-por">✅ Completado por: ${t.completadoPor || 'N/A'}</div>
+                    <div class="completado-por">✅ Completado por: ${esc(t.completadoPor || 'N/A')}</div>
                     ${t.fotoCierre ? `<div style="font-size:10px;color:#28a745;">📷 Con foto evidencia</div>` : ''}
                 ` : ''}
                 ${t.fotoCierre ? `<img src="${t.fotoCierre}" class="ticket-foto" />` : ''}
@@ -1904,14 +2042,17 @@
     // ============================================================
     //  DETALLE DE TICKET
     // ============================================================
-    function openDetailTrabajador(id) {
+    function openDetailTrabajador(id, fromTrabajadorView) {
         const ticket = allTickets.find(t => t.id === id);
         if (!ticket) return;
         
         const rolConfig = ROLES[currentRole];
-        
+
+        const esMio = (ticket.asignadoUid && ticket.asignadoUid === currentUser?.uid) ||
+                      (!ticket.asignadoUid && ticket.asignado === currentUser?.name);
+
         // Verificar acceso
-        if (!rolConfig.verTodos && ticket.asignado !== currentUser?.name && currentRole !== 'administrativo') {
+        if (!rolConfig.verTodos && !esMio && currentRole !== 'administrativo') {
             showToast('⚠️ No tienes acceso a este ticket', 'error');
             return;
         }
@@ -1923,9 +2064,11 @@
         }
         
         currentTicketId = id;
+        openedFromTrabajadorView = !!fromTrabajadorView;
         
         const detail = document.getElementById('ticketDetailTrabajador');
         detail.classList.add('open');
+        detail.scrollIntoView({ behavior: 'smooth', block: 'start' });
         document.getElementById('dIdT').textContent = ticket.id.slice(0, 8);
         document.getElementById('dLocationT').textContent = ticket.location || ticket.building + ' - ' + ticket.floor + ' - ' + ticket.space;
         document.getElementById('dTypeT').textContent = ticket.type === 'limpieza' ? '🧹 Limpieza' : '🔧 Mantenimiento';
@@ -1964,13 +2107,14 @@
             fotoCierreSection.style.display = 'none';
         }
 
+        // FIX: limpiar cualquier bloque de asignación anterior ANTES de
+        // crear uno nuevo. Antes solo se borraba el <select> interno, no
+        // el contenedor completo, así que se iban acumulando selects y
+        // botones cada vez que se abría un ticket distinto sin cerrar.
+        document.getElementById('asignacionContainer')?.remove();
+
         // Para encargados: mostrar opciones de asignación
         if (rolConfig.puedeAsignar && ticket.status !== 'completado') {
-            const existingSelect = document.getElementById('asignarSelect');
-            const existingBtn = document.querySelector('.asignar-btn');
-            if (existingSelect) existingSelect.remove();
-            if (existingBtn) existingBtn.remove();
-            
             const container = document.createElement('div');
             container.className = 'asignacion-container';
             container.id = 'asignacionContainer';
@@ -1991,7 +2135,7 @@
             userSelect.style.marginBottom = '8px';
             
             const btn = document.createElement('button');
-            btn.className = 'btn-gold';
+            btn.className = 'btn-gold asignar-btn';
             btn.textContent = '👤 Asignar';
             btn.onclick = asignarTicket;
             
@@ -2016,7 +2160,7 @@
                                 const puedeEdificio = !userRolConfig.edificiosPermitidos || 
                                     userRolConfig.edificiosPermitidos.some(e => edificiosPermitidos.includes(e));
                                 if (puedeEdificio) {
-                                    userSelect.innerHTML += `<option value="${u.name}">${u.name}</option>`;
+                                    userSelect.innerHTML += `<option value="${esc(u.uid)}">${esc(u.name)}</option>`;
                                 }
                             }
                         }
@@ -2028,12 +2172,14 @@
             });
             
             if (ticket.asignado) {
-                const usuario = allUsers.find(u => u.name === ticket.asignado);
+                const usuario = ticket.asignadoUid
+                    ? allUsers.find(u => u.uid === ticket.asignadoUid)
+                    : allUsers.find(u => u.name === ticket.asignado);
                 if (usuario) {
                     typeSelect.value = usuario.role;
                     typeSelect.dispatchEvent(new Event('change'));
                     setTimeout(() => {
-                        userSelect.value = ticket.asignado;
+                        userSelect.value = usuario.uid;
                     }, 100);
                 }
             }
@@ -2045,13 +2191,16 @@
         currentTicketId = null;
         photoCierreData = null;
         document.getElementById('photoCierrePreview').classList.remove('show');
-        const container = document.getElementById('asignacionContainer');
-        if (container) container.remove();
+        document.getElementById('asignacionContainer')?.remove();
     }
 
     function volverListaTrabajador() {
         closeDetailTrabajador();
-        const list = document.getElementById('ticketListTrabajador');
+        // FIX: "Volver a la lista" ahora hace scroll a la lista correcta
+        // según desde dónde se abrió el detalle (Encargado o Trabajador),
+        // en vez de asumir siempre la lista de trabajador.
+        const listId = openedFromTrabajadorView ? 'ticketListTrabajador' : 'ticketsEncargadoContainer';
+        const list = document.getElementById(listId);
         if (list) {
             list.scrollIntoView({ behavior: 'smooth' });
         }
@@ -2072,30 +2221,33 @@
             return;
         }
         
-        const asignado = userSelect.value;
+        const asignadoUid = userSelect.value;
         const tipo = typeSelect.value;
         
         if (!tipo) {
             showToast('⚠️ Seleccioná un tipo de usuario', 'error');
             return;
         }
-        if (!asignado) {
+        if (!asignadoUid) {
             showToast('⚠️ Seleccioná un usuario', 'error');
             return;
         }
         
         try {
-            const usuario = allUsers.find(u => u.name === asignado && u.role === tipo);
+            // FIX: ahora se busca y guarda por uid, no por nombre, para
+            // evitar ambigüedad si dos usuarios comparten el mismo nombre.
+            const usuario = allUsers.find(u => u.uid === asignadoUid && u.role === tipo);
             if (!usuario) {
                 showToast('⚠️ El usuario seleccionado no existe', 'error');
                 return;
             }
             
             await db.collection('tickets').doc(currentTicketId).update({
-                asignado: asignado,
+                asignado: usuario.name,
+                asignadoUid: usuario.uid,
                 status: 'enprogreso'
             });
-            showToast(`✅ Ticket asignado a ${asignado}`, 'success');
+            showToast(`✅ Ticket asignado a ${usuario.name}`, 'success');
             closeDetailTrabajador();
             renderTicketsEncargado(encargadoFilter);
             updateKPIs();
@@ -2131,6 +2283,7 @@
             const updateData = {
                 status: 'completado',
                 completadoPor: currentUser.name,
+                completadoPorUid: currentUser.uid,
                 fechaCompletado: firebase.firestore.FieldValue.serverTimestamp()
             };
             
@@ -2208,6 +2361,19 @@
             );
         }
 
+        // FIX: aplicar el filtro de fechas que ya existía en el formulario
+        // (los inputs estaban conectados con onchange, pero nunca se
+        // usaban dentro de esta función).
+        if (from) {
+            const fromDate = new Date(from);
+            tickets = tickets.filter(t => t.fechaCompletado?.toDate && t.fechaCompletado.toDate() >= fromDate);
+        }
+        if (to) {
+            const toDate = new Date(to);
+            toDate.setHours(23, 59, 59, 999);
+            tickets = tickets.filter(t => t.fechaCompletado?.toDate && t.fechaCompletado.toDate() <= toDate);
+        }
+
         const container = document.getElementById('completadosContainer');
         if (tickets.length === 0) {
             container.innerHTML = '<div style="color:#94a3b8;text-align:center;padding:12px;font-size:13px;">No hay tickets completados</div>';
@@ -2217,19 +2383,19 @@
         container.innerHTML = tickets.map(t => `
             <div class="list-item">
                 <div class="item-left">
-                    <strong style="font-size:13px;color:#1a3a5c;">${t.id.slice(0, 8)}</strong>
-                    <div style="font-size:11px;color:#94a3b8;">${t.location || t.building}</div>
-                    <span class="ticket-edificio">${t.building}</span>
-                    <div style="font-size:12px;color:#1e293b;margin-top:2px;">${t.obs}</div>
+                    <strong style="font-size:13px;color:#1a3a5c;">${esc(t.id.slice(0, 8))}</strong>
+                    <div style="font-size:11px;color:#94a3b8;">${esc(t.location || t.building)}</div>
+                    <span class="ticket-edificio">${esc(t.building)}</span>
+                    <div style="font-size:12px;color:#1e293b;margin-top:2px;">${esc(t.obs)}</div>
                     <div style="font-size:11px;color:#28a745;margin-top:4px;">
-                        ✅ Completado por: <strong>${t.completadoPor || 'N/A'}</strong>
+                        ✅ Completado por: <strong>${esc(t.completadoPor || 'N/A')}</strong>
                         ${t.fechaCompletado?.toDate ? ' | ' + t.fechaCompletado.toDate().toLocaleString() : ''}
                         ${t.fotoCierre ? ' 📷 Con foto' : ''}
                     </div>
                     ${t.fotoCierre ? `<img src="${t.fotoCierre}" style="max-width:100%;max-height:60px;border-radius:6px;margin-top:4px;border:1px solid #edf2f7;" />` : ''}
                 </div>
                 <div class="item-right">
-                    <div style="font-size:11px;color:#94a3b8;">${t.asignado || 'Sin asignar'}</div>
+                    <div style="font-size:11px;color:#94a3b8;">${esc(t.asignado || 'Sin asignar')}</div>
                 </div>
             </div>
         `).join('');
@@ -2310,13 +2476,13 @@
         
         Object.keys(edificios).forEach(edificio => {
             if (!edificiosPermitidos.includes(edificio)) return;
-            html += `<div style="margin-bottom:8px;"><div style="font-weight:700;color:#1a3a5c;font-size:14px;">🏢 ${edificio}</div>`;
+            html += `<div style="margin-bottom:8px;"><div style="font-weight:700;color:#1a3a5c;font-size:14px;">🏢 ${esc(edificio)}</div>`;
             const pisos = edificios[edificio].pisos;
             Object.keys(pisos).forEach(piso => {
-                html += `<div style="margin-left:16px;margin-top:4px;"><div style="font-weight:600;color:#2a5a8a;font-size:13px;">📐 ${piso}</div>`;
+                html += `<div style="margin-left:16px;margin-top:4px;"><div style="font-weight:600;color:#2a5a8a;font-size:13px;">📐 ${esc(piso)}</div>`;
                 html += `<div style="margin-left:16px;">`;
                 pisos[piso].forEach(espacio => {
-                    html += `<div style="color:#475569;font-size:12px;padding:2px 0;">🚪 ${espacio}</div>`;
+                    html += `<div style="color:#475569;font-size:12px;padding:2px 0;">🚪 ${esc(espacio)}</div>`;
                 });
                 html += `</div></div>`;
             });
@@ -2363,11 +2529,11 @@
             container.innerHTML = allUsers.map(u => `
                 <div class="list-item">
                     <div class="item-left">
-                        <strong style="font-size:13px;color:#1a3a5c;">${u.name}</strong>
-                        <div style="font-size:11px;color:#94a3b8;">${u.email}</div>
+                        <strong style="font-size:13px;color:#1a3a5c;">${esc(u.name)}</strong>
+                        <div style="font-size:11px;color:#94a3b8;">${esc(u.email)}</div>
                     </div>
                     <div class="item-right">
-                        <span style="font-size:11px;font-weight:600;color:#1a3a5c;">${roleEmoji[u.role] || '👤'} ${roleLabels[u.role] || u.role}</span>
+                        <span style="font-size:11px;font-weight:600;color:#1a3a5c;">${roleEmoji[u.role] || '👤'} ${roleLabels[u.role] || esc(u.role)}</span>
                     </div>
                 </div>
             `).join('');
@@ -2415,6 +2581,37 @@
     console.log('   🔧 Técnico: Tickets de mantenimiento en todos los edificios');
     console.log('   📋 Administrativo: Solo puede crear reportes');
     console.log('✅ Al completar un ticket, se registra el usuario y puede subir foto evidencia');
+
+    /* ================================================================
+       NOTAS DE SEGURIDAD PENDIENTES (no se resuelven solo con este HTML)
+       ================================================================
+       1) Reglas de Firestore: hoy cualquier usuario autenticado puede
+          escribir en "tickets" y en su propio doc de "usuarios" (incluido
+          el campo "role") directamente desde la consola del navegador.
+          Recomendado, en Firebase Console > Firestore > Reglas:
+
+          rules_version = '2';
+          service cloud.firestore {
+            match /databases/{database}/documents {
+              match /usuarios/{uid} {
+                allow read: if request.auth != null;
+                allow create: if request.auth != null && request.auth.uid == uid;
+                // Evita que un usuario se cambie su propio rol después de creado:
+                allow update: if request.auth != null && request.auth.uid == uid
+                              && request.resource.data.role == resource.data.role;
+              }
+              match /tickets/{ticketId} {
+                allow read: if request.auth != null;
+                allow create: if request.auth != null;
+                allow update: if request.auth != null; // idealmente: validar rol contra /usuarios/{request.auth.uid}
+              }
+            }
+          }
+
+       2) Fotos en base64: considerar migrar a Firebase Storage y guardar
+          solo la URL en el documento, para no depender del límite de
+          1MB por documento de Firestore.
+    ================================================================= */
 </script>
 </body>
 </html>
